@@ -84,6 +84,22 @@ func (r *MessageRepository) UpdateMessageStatus(ctx context.Context, id domain.M
 	return nil
 }
 
+func (r *MessageRepository) GetMessagesNeedingStatusAdvance(ctx context.Context) ([]*domain.Message, error) {
+	var records []MessageRecord
+	if err := r.db.WithContext(ctx).
+		Where("direction = ? AND status IN ?", "outbound", []string{"accepted", "sent", "delivered"}).
+		Order("created_at ASC").
+		Limit(50).
+		Find(&records).Error; err != nil {
+		return nil, fmt.Errorf("get messages needing advance: %w", err)
+	}
+	result := make([]*domain.Message, len(records))
+	for i, rec := range records {
+		result[i] = r.toDomain(&rec)
+	}
+	return result, nil
+}
+
 func (r *MessageRepository) toDomain(rec *MessageRecord) *domain.Message {
 	msg := &domain.Message{
 		ID:             domain.MessageID(rec.ExternalID),

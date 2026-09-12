@@ -19,6 +19,8 @@ type Server struct {
 	app            *fiber.App
 	messaging      *application.MessagingService
 	phoneReg       *application.PhoneRegistry
+	admin          *application.AdminService
+	mediaStore     ports.MediaStore
 	identities     ports.VirtualIdentityRepository
 	conversations  ports.ConversationRepository
 	messages       ports.MessageRepository
@@ -50,13 +52,13 @@ func NewServer(
 }
 
 func (s *Server) setupRoutes() {
-	// Meta-compatible API
-	s.app.Post("/v18.0/:phone_number_id/messages", s.handleSendMessage)
-	s.app.Post("/:api_version/:phone_number_id/messages", s.handleSendMessage)
-
-	// Webhook
+	// Webhook (no auth — Meta's server-to-server push)
 	s.app.Get("/webhook", s.handleWebhookVerify)
 	s.app.Post("/webhook", s.handleWebhookReceive)
+
+	// Identity management
+	s.app.Post("/api/identities", s.handleCreateIdentity)
+	s.app.Get("/api/identities", s.handleListIdentities)
 
 	// Virtual device routes
 	s.app.Get("/device/:token", s.handleDevicePage)
@@ -67,23 +69,92 @@ func (s *Server) setupRoutes() {
 	s.app.Post("/device/:token/conversations/:conv_id/read", s.handleMarkRead)
 	s.app.Get("/device/:token/events", s.handleSSE)
 
-	// Identity management
-	s.app.Post("/api/identities", s.handleCreateIdentity)
-	s.app.Get("/api/identities", s.handleListIdentities)
+	// Meta-compatible API — protected by bearer token auth
+	meta := s.app.Group("/v18.0")
+	meta.Use(s.authMiddleware())
+	meta.Post("/:phone_number_id/messages", s.handleSendMessage)
+
+	meta2 := s.app.Group("/:api_version")
+	meta2.Use(s.authMiddleware())
+	meta2.Post("/:phone_number_id/messages", s.handleSendMessage)
+
+	// Media API (protected)
+	media := s.app.Group("/media")
+	media.Use(s.authMiddleware())
+	media.Use(func(c *fiber.Ctx) error {
+		c.Locals("media_store", s.mediaStore)
+		return c.Next()
+	})
+	media.Post("/", s.handleUploadMedia)
+	media.Get("/:media_id", s.handleGetMedia)
+}
+
+func (s *Server) SetAdminService(admin *application.AdminService) {
+	s.admin = admin
+}
+
+func (s *Server) SetMediaStore(store ports.MediaStore) {
+	s.mediaStore = store
+}
+
+func (s *Server) authMiddleware() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		if s.admin == nil {
+			return c.Next()
+		}
+
+		authHeader := c.Get("Authorization")
+		if authHeader == "" {
+			return c.Status(http.StatusUnauthorized).JSON(domain.ErrMissingToken())
+		}
+
+		token := strings.TrimPrefix(authHeader, "Bearer ")
+		if token == authHeader {
+			return c.Status(http.StatusUnauthorized).JSON(domain.ErrMissingToken())
+		}
+
+		phoneNumberID := c.Params("phone_number_id")
+		if phoneNumberID == "" {
+			phoneNumberID = c.Query("phone_number_id")
+		}
+		if phoneNumberID == "" {
+			phoneNumberID = c.Get("X-Phone-Number-Id")
+		}
+
+		// For Meta API, extract phone_number_id from URL path
+		if phoneNumberID == "" {
+			path := c.Path()
+			parts := strings.Split(path, "/")
+			for i, part := range parts {
+				if part == "messages" && i > 0 {
+					phoneNumberID = parts[i-1]
+					break
+				}
+			}
+		}
+
+		// Normalize phone number if it looks like one
+		if len(phoneNumberID) > 0 && phoneNumberID[0] >= '0' && phoneNumberID[0] <= '9' {
+			phoneNumberID = string(domain.NormalizePhoneNumber(phoneNumberID))
+		}
+
+		result, err := s.admin.AuthorizeToken(c.Context(), token, phoneNumberID)
+		if err != nil {
+			s.logger.Error("auth failed", "error", err, "token_len", len(token), "phone_id", phoneNumberID)
+			return c.Status(http.StatusUnauthorized).JSON(domain.ErrInvalidToken())
+		}
+
+		c.Locals("application", result.Application)
+		c.Locals("waba", result.WABA)
+		c.Locals("phone_number", result.PhoneNumber)
+		c.Locals("webhook_config", result.WebhookConfig)
+
+		return c.Next()
+	}
 }
 
 func (s *Server) handleSendMessage(c *fiber.Ctx) error {
 	phoneNumberID := c.Params("phone_number_id")
-
-	authHeader := c.Get("Authorization")
-	if authHeader == "" {
-		return c.Status(http.StatusUnauthorized).JSON(domain.ErrMissingToken())
-	}
-
-	token := strings.TrimPrefix(authHeader, "Bearer ")
-	if token == authHeader {
-		return c.Status(http.StatusUnauthorized).JSON(domain.ErrMissingToken())
-	}
 
 	var req struct {
 		MessagingProduct string `json:"messaging_product"`
@@ -589,6 +660,60 @@ func (s *Server) handleSSE(c *fiber.Ctx) error {
 func (s *Server) RegisterAdmin(admin *application.AdminService, messaging *application.MessagingService) {
 	adminHandler := NewAdminHandler(admin, messaging)
 	adminHandler.Register(s.app)
+}
+
+func (s *Server) handleUploadMedia(c *fiber.Ctx) error {
+	file, err := c.FormFile("file")
+	if err != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "file is required"})
+	}
+
+	f, err := file.Open()
+	if err != nil {
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "failed to open file"})
+	}
+	defer f.Close()
+
+	data := make([]byte, file.Size)
+	n, err := f.Read(data)
+	if err != nil {
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "failed to read file"})
+	}
+	data = data[:n]
+
+	mediaStore := c.Locals("media_store").(ports.MediaStore)
+	if mediaStore == nil {
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "media store not available"})
+	}
+
+	mediaID, err := mediaStore.Store(c.Context(), file.Filename, data, file.Header.Get("Content-Type"))
+	if err != nil {
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.Status(http.StatusOK).JSON(fiber.Map{
+		"id":          mediaID,
+		"file_name":   file.Filename,
+		"file_size":   n,
+		"mime_type":   file.Header.Get("Content-Type"),
+	})
+}
+
+func (s *Server) handleGetMedia(c *fiber.Ctx) error {
+	mediaID := c.Params("media_id")
+
+	mediaStore := c.Locals("media_store").(ports.MediaStore)
+	if mediaStore == nil {
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "media store not available"})
+	}
+
+	data, mimeType, err := mediaStore.Get(c.Context(), mediaID)
+	if err != nil {
+		return c.Status(http.StatusNotFound).JSON(fiber.Map{"error": "media not found"})
+	}
+
+	c.Set("Content-Type", mimeType)
+	return c.Send(data)
 }
 
 func (s *Server) Listen(addr string) error {

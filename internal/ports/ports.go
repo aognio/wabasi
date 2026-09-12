@@ -11,6 +11,7 @@ type MessageRepository interface {
 	GetMessageByID(ctx context.Context, id domain.MessageID) (*domain.Message, error)
 	GetMessagesByConversation(ctx context.Context, conversationID domain.ConversationID, limit int, before *domain.MessageID) ([]*domain.Message, error)
 	UpdateMessageStatus(ctx context.Context, id domain.MessageID, status domain.MessageStatus) error
+	GetMessagesNeedingStatusAdvance(ctx context.Context) ([]*domain.Message, error)
 }
 
 type ConversationRepository interface {

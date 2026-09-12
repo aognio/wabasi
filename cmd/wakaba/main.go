@@ -42,6 +42,8 @@ func main() {
 	credentialRepo := sqliteAdapter.NewCredentialRepository(db)
 	webhookConfigRepo := sqliteAdapter.NewWebhookConfigRepository(db)
 
+	mediaStore := sqliteAdapter.NewMediaStore(db, "var")
+
 	messagingSvc := application.NewMessagingService(
 		messageRepo,
 		conversationRepo,
@@ -66,10 +68,21 @@ func main() {
 		logger,
 	)
 
+	statusSim := application.NewStatusSimulator(
+		messageRepo,
+		conversationRepo,
+		eventPub,
+		webhookDisp,
+		logger,
+	)
+
 	deliveryWorker := webhook.NewDeliveryWorker(db, logger)
 	deliveryWorker.Start(context.Background())
+	statusSim.Start(context.Background())
 
 	server := http.NewServer(messagingSvc, phoneReg, identityRepo, conversationRepo, messageRepo, logger)
+	server.SetAdminService(adminSvc)
+	server.SetMediaStore(mediaStore)
 	server.RegisterAdmin(adminSvc, messagingSvc)
 
 	addr := ":8080"

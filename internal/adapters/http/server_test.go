@@ -2,6 +2,7 @@ package http_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -39,6 +40,55 @@ func setupTestServer(t *testing.T) (*adapterHTTP.Server, func()) {
 	server := adapterHTTP.NewServer(messagingSvc, phoneReg, identityRepo, conversationRepo, messageRepo, logger)
 
 	return server, func() {}
+}
+
+func setupTestWithCredential(t *testing.T) (*adapterHTTP.Server, string, func()) {
+	t.Helper()
+
+	db, err := sqliteAdapter.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+
+	messageRepo := sqliteAdapter.NewMessageRepository(db)
+	conversationRepo := sqliteAdapter.NewConversationRepository(db)
+	identityRepo := sqliteAdapter.NewVirtualIdentityRepository(db)
+	phoneRepo := sqliteAdapter.NewPhoneNumberRepository(db)
+	eventPub := sqliteAdapter.NewEventPublisher(db, logger)
+	webhookDisp := sqliteAdapter.NewWebhookDispatcher(db, logger)
+
+	businessRepo := sqliteAdapter.NewBusinessRepository(db)
+	wabaRepo := sqliteAdapter.NewWABARepository(db)
+	businessPhoneRepo := sqliteAdapter.NewBusinessPhoneNumberRepository(db)
+	appRepo := sqliteAdapter.NewApplicationRepository(db)
+	credentialRepo := sqliteAdapter.NewCredentialRepository(db)
+	webhookConfigRepo := sqliteAdapter.NewWebhookConfigRepository(db)
+
+	messagingSvc := application.NewMessagingService(
+		messageRepo, conversationRepo, identityRepo, phoneRepo, eventPub, webhookDisp, logger,
+	)
+	phoneReg := application.NewPhoneRegistry(phoneRepo)
+
+	adminSvc := application.NewAdminService(
+		businessRepo, wabaRepo, businessPhoneRepo, appRepo,
+		credentialRepo, webhookConfigRepo, phoneReg, eventPub, logger,
+	)
+
+	// Create a business with WABA and phone number
+	biz, _ := adminSvc.CreateBusiness(context.Background(), "Test Biz", "Test", "PE")
+	waba, _ := adminSvc.CreateWABA(context.Background(), biz.ID, "Test WABA", "America/Lima", "PEN")
+	_, _ = adminSvc.ProvisionPhoneNumber(context.Background(), waba.ID, "+5115550100", "Test Phone", "PE")
+
+	// Create an application and issue a credential
+	app, _ := adminSvc.CreateApplication(context.Background(), biz.ID, "Test App")
+	_, token, _ := adminSvc.IssueCredential(context.Background(), app.ID)
+
+	server := adapterHTTP.NewServer(messagingSvc, phoneReg, identityRepo, conversationRepo, messageRepo, logger)
+	server.SetAdminService(adminSvc)
+
+	return server, token, func() {}
 }
 
 func TestCreateIdentity(t *testing.T) {
@@ -97,7 +147,7 @@ func TestDuplicatePhoneRejection(t *testing.T) {
 }
 
 func TestSendMessageToIdentity(t *testing.T) {
-	server, cleanup := setupTestServer(t)
+	server, token, cleanup := setupTestWithCredential(t)
 	defer cleanup()
 
 	createBody, _ := json.Marshal(map[string]string{
@@ -119,9 +169,9 @@ func TestSendMessageToIdentity(t *testing.T) {
 		},
 	})
 
-	req2 := httptest.NewRequest(http.MethodPost, "/v18.0/biz_phone_001/messages", bytes.NewReader(sendBody))
+	req2 := httptest.NewRequest(http.MethodPost, "/v18.0/+5115550100/messages", bytes.NewReader(sendBody))
 	req2.Header.Set("Content-Type", "application/json")
-	req2.Header.Set("Authorization", "Bearer test-token")
+	req2.Header.Set("Authorization", "Bearer "+token)
 	resp, err := server.App().Test(req2)
 	if err != nil {
 		t.Fatal(err)
@@ -238,7 +288,7 @@ func TestWebhookVerificationInvalidToken(t *testing.T) {
 }
 
 func TestMissingAuthorization(t *testing.T) {
-	server, cleanup := setupTestServer(t)
+	server, _, cleanup := setupTestWithCredential(t)
 	defer cleanup()
 
 	sendBody, _ := json.Marshal(map[string]interface{}{
@@ -248,7 +298,7 @@ func TestMissingAuthorization(t *testing.T) {
 		"text":              map[string]interface{}{"body": "test"},
 	})
 
-	req := httptest.NewRequest(http.MethodPost, "/v18.0/biz_phone_001/messages", bytes.NewReader(sendBody))
+	req := httptest.NewRequest(http.MethodPost, "/v18.0/+5115550100/messages", bytes.NewReader(sendBody))
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := server.App().Test(req)
 	if err != nil {
@@ -261,7 +311,7 @@ func TestMissingAuthorization(t *testing.T) {
 }
 
 func TestEndToEndFlow(t *testing.T) {
-	server, cleanup := setupTestServer(t)
+	server, token, cleanup := setupTestWithCredential(t)
 	defer cleanup()
 
 	// 1. Create Alice
@@ -279,9 +329,9 @@ func TestEndToEndFlow(t *testing.T) {
 		"type":              "text",
 		"text":              map[string]interface{}{"body": "Hello Alice!"},
 	})
-	req2 := httptest.NewRequest(http.MethodPost, "/v18.0/biz_phone_001/messages", bytes.NewReader(sendBody))
+	req2 := httptest.NewRequest(http.MethodPost, "/v18.0/+5115550100/messages", bytes.NewReader(sendBody))
 	req2.Header.Set("Content-Type", "application/json")
-	req2.Header.Set("Authorization", "Bearer test-token")
+	req2.Header.Set("Authorization", "Bearer "+token)
 	resp2, _ := server.App().Test(req2)
 	if resp2.StatusCode != http.StatusOK {
 		t.Fatalf("send message: expected 200, got %d", resp2.StatusCode)
@@ -294,7 +344,7 @@ func TestEndToEndFlow(t *testing.T) {
 			{"id": "waba-001", "changes": []map[string]interface{}{
 				{"value": map[string]interface{}{
 					"messaging_product": "whatsapp",
-					"metadata":          map[string]interface{}{"phone_number_id": "biz_phone_001"},
+					"metadata":          map[string]interface{}{"phone_number_id": "+5115550100"},
 					"contacts":          []map[string]interface{}{{"profile": map[string]interface{}{"name": "Alice"}, "wa_id": "51987654321"}},
 					"messages":          []map[string]interface{}{{"from": "51987654321", "id": "wamid.alice-reply", "timestamp": "1757699100", "type": "text", "text": map[string]interface{}{"body": "Hi there!"}}},
 				}, "field": "messages"},
@@ -310,8 +360,8 @@ func TestEndToEndFlow(t *testing.T) {
 	}
 
 	// 4. Check device conversations
-	token := alice["device_token"].(string)
-	req4 := httptest.NewRequest(http.MethodGet, "/device/"+token+"/conversations", nil)
+	token2 := alice["device_token"].(string)
+	req4 := httptest.NewRequest(http.MethodGet, "/device/"+token2+"/conversations", nil)
 	resp4, _ := server.App().Test(req4)
 	var convs []map[string]interface{}
 	json.NewDecoder(resp4.Body).Decode(&convs)
@@ -321,7 +371,7 @@ func TestEndToEndFlow(t *testing.T) {
 
 	// 5. Check messages in conversation
 	convID := convs[0]["id"].(string)
-	req5 := httptest.NewRequest(http.MethodGet, "/device/"+token+"/conversations/"+convID+"/messages", nil)
+	req5 := httptest.NewRequest(http.MethodGet, "/device/"+token2+"/conversations/"+convID+"/messages", nil)
 	resp5, _ := server.App().Test(req5)
 	var msgs []map[string]interface{}
 	json.NewDecoder(resp5.Body).Decode(&msgs)

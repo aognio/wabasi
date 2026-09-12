@@ -20,6 +20,7 @@ type Server struct {
 	messaging      *application.MessagingService
 	phoneReg       *application.PhoneRegistry
 	admin          *application.AdminService
+	observability  *application.ObservabilityService
 	mediaStore     ports.MediaStore
 	identities     ports.VirtualIdentityRepository
 	conversations  ports.ConversationRepository
@@ -95,6 +96,10 @@ func (s *Server) SetAdminService(admin *application.AdminService) {
 
 func (s *Server) SetMediaStore(store ports.MediaStore) {
 	s.mediaStore = store
+}
+
+func (s *Server) SetObservabilityService(obs *application.ObservabilityService) {
+	s.observability = obs
 }
 
 func (s *Server) authMiddleware() fiber.Handler {
@@ -1031,6 +1036,9 @@ func (s *Server) handleSSE(c *fiber.Ctx) error {
 
 func (s *Server) RegisterAdmin(admin *application.AdminService, messaging *application.MessagingService) {
 	adminHandler := NewAdminHandler(admin, messaging)
+	if s.observability != nil {
+		adminHandler.SetObservabilityService(s.observability)
+	}
 	adminHandler.Register(s.app)
 }
 

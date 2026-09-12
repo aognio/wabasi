@@ -2,6 +2,7 @@ package ports
 
 import (
 	"context"
+	"time"
 
 	"github.com/wakaba/wakaba/internal/domain"
 )
@@ -81,6 +82,33 @@ type WebhookConfigRepository interface {
 
 type EventPublisher interface {
 	Publish(ctx context.Context, event *domain.DomainEvent) error
+}
+
+type EventFilter struct {
+	Types           []domain.EventType
+	Source          domain.EventSource
+	ConversationID  string
+	MessageID       string
+	ApplicationID   string
+	ActorID         string
+	TraceID         domain.TraceID
+	Outcome         domain.EventOutcome
+	Since           *time.Time
+	Until           *time.Time
+	Limit           int
+	Offset          int
+}
+
+type EventReader interface {
+	GetByID(ctx context.Context, id domain.EventID) (*domain.DomainEvent, error)
+	List(ctx context.Context, filter EventFilter) ([]*domain.DomainEvent, error)
+	Count(ctx context.Context, filter EventFilter) (int64, error)
+	GetByTraceID(ctx context.Context, traceID domain.TraceID) ([]*domain.DomainEvent, error)
+	GetByMessageID(ctx context.Context, messageID string) ([]*domain.DomainEvent, error)
+	GetByConversationID(ctx context.Context, conversationID string, limit int) ([]*domain.DomainEvent, error)
+	GetByApplicationID(ctx context.Context, applicationID string, since *time.Time, limit int) ([]*domain.DomainEvent, error)
+	CountByType(ctx context.Context, since *time.Time) (map[domain.EventType]int64, error)
+	CountByOutcome(ctx context.Context, since *time.Time) (map[domain.EventOutcome]int64, error)
 }
 
 type MediaStore interface {

@@ -44,6 +44,8 @@ func main() {
 
 	mediaStore := sqliteAdapter.NewMediaStore(db, "var")
 
+	obsRepo := sqliteAdapter.NewEventRepository(db)
+
 	messagingSvc := application.NewMessagingService(
 		messageRepo,
 		conversationRepo,
@@ -76,6 +78,13 @@ func main() {
 		logger,
 	)
 
+	obsSvc := application.NewObservabilityService(
+		obsRepo,
+		messageRepo,
+		conversationRepo,
+		identityRepo,
+	)
+
 	deliveryWorker := webhook.NewDeliveryWorker(db, logger)
 	deliveryWorker.Start(context.Background())
 	statusSim.Start(context.Background())
@@ -83,6 +92,7 @@ func main() {
 	server := http.NewServer(messagingSvc, phoneReg, identityRepo, conversationRepo, messageRepo, logger)
 	server.SetAdminService(adminSvc)
 	server.SetMediaStore(mediaStore)
+	server.SetObservabilityService(obsSvc)
 	server.RegisterAdmin(adminSvc, messagingSvc)
 
 	addr := ":8080"

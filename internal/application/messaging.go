@@ -138,6 +138,7 @@ type SendMessageResponse struct {
 }
 
 func (s *MessagingService) SendMessage(ctx context.Context, req *SendMessageRequest) (*SendMessageResponse, error) {
+	traceID := domain.GenerateTraceID()
 	fromPhone := domain.NormalizePhoneNumber(req.From)
 	toPhone := domain.NormalizePhoneNumber(req.To)
 
@@ -265,13 +266,20 @@ func (s *MessagingService) SendMessage(ctx context.Context, req *SendMessageRequ
 		s.logger.Error("failed to update message status", "error", err)
 	}
 
-	s.events.Publish(ctx, domain.NewDomainEvent(domain.EventOutboundMessageAccepted, msg))
+	s.events.Publish(ctx, domain.NewEvent(domain.EventOutboundMessageAccepted).
+		WithTraceID(traceID).
+		WithSource(domain.SourceMessaging).
+		WithConversationID(msg.ConversationID).
+		WithMessageID(string(msg.ID)).
+		WithPayload(msg).
+		Build())
 
 	s.logger.Info("message accepted",
 		"message_id", msg.ID,
 		"type", msg.Type,
 		"from", fromID,
 		"to", toID,
+		"trace_id", traceID,
 	)
 
 	return &SendMessageResponse{
@@ -304,6 +312,7 @@ type ReceiveMessageResponse struct {
 }
 
 func (s *MessagingService) ReceiveMessage(ctx context.Context, req *ReceiveMessageRequest) (*ReceiveMessageResponse, error) {
+	traceID := domain.GenerateTraceID()
 	fromPhone := domain.NormalizePhoneNumber(req.From)
 	toPhone := domain.NormalizePhoneNumber(req.To)
 
@@ -399,14 +408,27 @@ func (s *MessagingService) ReceiveMessage(ctx context.Context, req *ReceiveMessa
 	s.conversations.UpdateLastMessage(ctx, conv.ID)
 	s.conversations.IncrementUnread(ctx, conv.ID)
 
-	s.events.Publish(ctx, domain.NewDomainEvent(domain.EventInboundMessageReceived, msg))
-	s.webhooks.Publish(ctx, domain.NewDomainEvent(domain.EventWebhookQueued, msg))
+	s.events.Publish(ctx, domain.NewEvent(domain.EventInboundMessageReceived).
+		WithTraceID(traceID).
+		WithSource(domain.SourceMessaging).
+		WithConversationID(msg.ConversationID).
+		WithMessageID(string(msg.ID)).
+		WithPayload(msg).
+		Build())
+	s.webhooks.Publish(ctx, domain.NewEvent(domain.EventWebhookQueued).
+		WithTraceID(traceID).
+		WithSource(domain.SourceWebhook).
+		WithConversationID(msg.ConversationID).
+		WithMessageID(string(msg.ID)).
+		WithPayload(msg).
+		Build())
 
 	s.logger.Info("inbound message received",
 		"message_id", msg.ID,
 		"type", msg.Type,
 		"from", fromID,
 		"to", toID,
+		"trace_id", traceID,
 	)
 
 	return &ReceiveMessageResponse{
@@ -415,6 +437,8 @@ func (s *MessagingService) ReceiveMessage(ctx context.Context, req *ReceiveMessa
 }
 
 func (s *MessagingService) UpdateStatus(ctx context.Context, messageID domain.MessageID, status domain.MessageStatus) error {
+	traceID := domain.GenerateTraceID()
+
 	if err := s.messages.UpdateMessageStatus(ctx, messageID, status); err != nil {
 		return fmt.Errorf("update status: %w", err)
 	}
@@ -448,8 +472,26 @@ func (s *MessagingService) UpdateStatus(ctx context.Context, messageID domain.Me
 		return nil
 	}
 
-	s.events.Publish(ctx, domain.NewDomainEvent(eventType, msg))
-	s.webhooks.Publish(ctx, domain.NewDomainEvent(domain.EventWebhookQueued, msg))
+	outcome := domain.EventOutcomeSuccess
+	if status == domain.MessageStatusFailed {
+		outcome = domain.EventOutcomeFailure
+	}
+
+	s.events.Publish(ctx, domain.NewEvent(eventType).
+		WithTraceID(traceID).
+		WithSource(domain.SourceStatusSim).
+		WithConversationID(msg.ConversationID).
+		WithMessageID(string(msg.ID)).
+		WithOutcome(outcome).
+		WithPayload(msg).
+		Build())
+	s.webhooks.Publish(ctx, domain.NewEvent(domain.EventWebhookQueued).
+		WithTraceID(traceID).
+		WithSource(domain.SourceWebhook).
+		WithConversationID(msg.ConversationID).
+		WithMessageID(string(msg.ID)).
+		WithPayload(msg).
+		Build())
 
 	return nil
 }

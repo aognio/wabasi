@@ -65,9 +65,17 @@ func (PhoneNumberRecord) TableName() string {
 
 type EventRecord struct {
 	gorm.Model
-	ExternalID string `gorm:"uniqueIndex"`
-	Type       string `gorm:"index;size:64"`
-	Payload    string `gorm:"type:text"`
+	ExternalID     string `gorm:"uniqueIndex"`
+	Type           string `gorm:"index;size:64"`
+	Payload        string `gorm:"type:text"`
+	TraceID        string `gorm:"index"`
+	Source         string `gorm:"index;size:32"`
+	ActorID        string `gorm:"index"`
+	ConversationID string `gorm:"index"`
+	MessageID      string `gorm:"index"`
+	ApplicationID  string `gorm:"index"`
+	Outcome        string `gorm:"index;size:16"`
+	DurationMs     int64
 }
 
 func (EventRecord) TableName() string {

@@ -52,7 +52,11 @@ func (s *AdminService) CreateBusiness(ctx context.Context, name, displayName, co
 	if err := s.businesses.Create(ctx, b); err != nil {
 		return nil, fmt.Errorf("create business: %w", err)
 	}
-	s.events.Publish(ctx, domain.NewDomainEvent(domain.EventBusinessCreated, b))
+	s.events.Publish(ctx, domain.NewEvent(domain.EventBusinessCreated).
+		WithSource(domain.SourceAdmin).
+		WithActorID(string(b.ID)).
+		WithPayload(b).
+		Build())
 	return b, nil
 }
 
@@ -75,7 +79,11 @@ func (s *AdminService) CreateWABA(ctx context.Context, businessID domain.Busines
 	if err := s.wabas.Create(ctx, w); err != nil {
 		return nil, fmt.Errorf("create waba: %w", err)
 	}
-	s.events.Publish(ctx, domain.NewDomainEvent(domain.EventWABACreated, w))
+	s.events.Publish(ctx, domain.NewEvent(domain.EventWABACreated).
+		WithSource(domain.SourceAdmin).
+		WithActorID(string(w.ID)).
+		WithPayload(w).
+		Build())
 	return w, nil
 }
 
@@ -114,7 +122,11 @@ func (s *AdminService) ProvisionPhoneNumber(ctx context.Context, wabaID domain.W
 	if err := s.phoneReg.Reserve(ctx, phone, "business_phone", string(p.ID)); err != nil {
 		return nil, fmt.Errorf("reserve phone: %w", err)
 	}
-	s.events.Publish(ctx, domain.NewDomainEvent(domain.EventBusinessPhoneProvisioned, p))
+	s.events.Publish(ctx, domain.NewEvent(domain.EventBusinessPhoneProvisioned).
+		WithSource(domain.SourceAdmin).
+		WithActorID(string(p.ID)).
+		WithPayload(p).
+		Build())
 	return p, nil
 }
 
@@ -137,7 +149,12 @@ func (s *AdminService) CreateApplication(ctx context.Context, businessID domain.
 	if err := s.apps.Create(ctx, a); err != nil {
 		return nil, fmt.Errorf("create application: %w", err)
 	}
-	s.events.Publish(ctx, domain.NewDomainEvent(domain.EventApplicationCreated, a))
+	s.events.Publish(ctx, domain.NewEvent(domain.EventApplicationCreated).
+		WithSource(domain.SourceAdmin).
+		WithActorID(string(a.ID)).
+		WithApplicationID(string(a.ID)).
+		WithPayload(a).
+		Build())
 	return a, nil
 }
 
@@ -164,7 +181,12 @@ func (s *AdminService) IssueCredential(ctx context.Context, appID domain.Applica
 	if err := s.credentials.Create(ctx, cred); err != nil {
 		return nil, "", fmt.Errorf("create credential: %w", err)
 	}
-	s.events.Publish(ctx, domain.NewDomainEvent(domain.EventCredentialIssued, cred))
+	s.events.Publish(ctx, domain.NewEvent(domain.EventCredentialIssued).
+		WithSource(domain.SourceAdmin).
+		WithActorID(string(cred.ID)).
+		WithApplicationID(string(appID)).
+		WithPayload(cred).
+		Build())
 	return cred, string(token), nil
 }
 
@@ -180,7 +202,11 @@ func (s *AdminService) RevokeCredential(ctx context.Context, id domain.Credentia
 	if err := s.credentials.Revoke(ctx, id); err != nil {
 		return fmt.Errorf("revoke credential: %w", err)
 	}
-	s.events.Publish(context.Background(), domain.NewDomainEvent(domain.EventCredentialRevoked, map[string]string{"id": string(id)}))
+	s.events.Publish(context.Background(), domain.NewEvent(domain.EventCredentialRevoked).
+		WithSource(domain.SourceAdmin).
+		WithActorID(string(id)).
+		WithPayload(map[string]string{"id": string(id)}).
+		Build())
 	return nil
 }
 
@@ -201,7 +227,11 @@ func (s *AdminService) ConfigureWebhook(ctx context.Context, appID domain.Applic
 		if err := s.webhooks.Update(ctx, existing); err != nil {
 			return nil, fmt.Errorf("update webhook: %w", err)
 		}
-		s.events.Publish(ctx, domain.NewDomainEvent(domain.EventWebhookConfigured, existing))
+		s.events.Publish(ctx, domain.NewEvent(domain.EventWebhookConfigured).
+			WithSource(domain.SourceAdmin).
+			WithApplicationID(string(appID)).
+			WithPayload(existing).
+			Build())
 		return existing, nil
 	}
 
@@ -209,7 +239,11 @@ func (s *AdminService) ConfigureWebhook(ctx context.Context, appID domain.Applic
 	if err := s.webhooks.Create(ctx, wh); err != nil {
 		return nil, fmt.Errorf("create webhook: %w", err)
 	}
-	s.events.Publish(ctx, domain.NewDomainEvent(domain.EventWebhookConfigured, wh))
+	s.events.Publish(ctx, domain.NewEvent(domain.EventWebhookConfigured).
+		WithSource(domain.SourceAdmin).
+		WithApplicationID(string(appID)).
+		WithPayload(wh).
+		Build())
 	return wh, nil
 }
 

@@ -3,20 +3,27 @@ package http
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/wakaba/wakaba/internal/application"
 	"github.com/wakaba/wakaba/internal/domain"
+	"github.com/wakaba/wakaba/internal/ports"
 )
 
 type AdminHandler struct {
-	admin    *application.AdminService
-	messaging *application.MessagingService
-	logger   interface{ Info(string, ...any) }
+	admin         *application.AdminService
+	messaging     *application.MessagingService
+	observability *application.ObservabilityService
+	logger        interface{ Info(string, ...any) }
 }
 
 func NewAdminHandler(admin *application.AdminService, messaging *application.MessagingService) *AdminHandler {
 	return &AdminHandler{admin: admin, messaging: messaging}
+}
+
+func (h *AdminHandler) SetObservabilityService(obs *application.ObservabilityService) {
+	h.observability = obs
 }
 
 func (h *AdminHandler) Register(app *fiber.App) {
@@ -37,6 +44,12 @@ func (h *AdminHandler) Register(app *fiber.App) {
 	app.Get("/admin/identities", h.handleIdentitiesList)
 	app.Get("/admin/conversations", h.handleConversationsList)
 	app.Get("/admin/messages", h.handleMessagesList)
+
+	// Observability reports
+	app.Get("/admin/reports", h.handleReportsIndex)
+	app.Get("/admin/reports/overview", h.handleSystemOverview)
+	app.Get("/admin/reports/events", h.handleEventLog)
+	app.Get("/admin/reports/metrics", h.handleMetrics)
 }
 
 func (h *AdminHandler) handleDashboard(c *fiber.Ctx) error {
@@ -78,6 +91,7 @@ func (h *AdminHandler) handleDashboard(c *fiber.Ctx) error {
   <a href="/admin/identities" class="block bg-white rounded-lg shadow p-4 hover:shadow-md">Consumer Identities</a>
   <a href="/admin/conversations" class="block bg-white rounded-lg shadow p-4 hover:shadow-md">Conversations</a>
   <a href="/admin/messages" class="block bg-white rounded-lg shadow p-4 hover:shadow-md">Messages</a>
+  <a href="/admin/reports" class="block bg-white rounded-lg shadow p-4 hover:shadow-md border-l-4 border-[#008069]">Reports &amp; Observability</a>
 </nav>
 </div></body></html>`,
 		len(businesses), len(wabas), len(phones), len(apps)))
@@ -553,4 +567,270 @@ func (h *AdminHandler) handleMessagesList(c *fiber.Ctx) error {
 </div>
 <p class="text-gray-500 text-sm">Message inspection available through the API and Virtual Client.</p>
 </div></body></html>`)
+}
+
+func (h *AdminHandler) handleReportsIndex(c *fiber.Ctx) error {
+	return c.Type("html").SendString(`<!DOCTYPE html>
+<html><head><title>Reports - Wakaba Admin</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head><body class="bg-gray-50 min-h-screen">
+<div class="max-w-6xl mx-auto px-6 py-8">
+<div class="flex items-center gap-4 mb-6">
+  <a href="/admin" class="text-gray-500 hover:text-gray-700">&larr; Back</a>
+  <h1 class="text-2xl font-bold text-gray-800">Reports</h1>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+  <a href="/admin/reports/overview" class="bg-white rounded-lg shadow p-6 hover:shadow-md transition">
+    <div class="text-lg font-semibold text-gray-800">System Overview</div>
+    <div class="text-sm text-gray-500 mt-1">World summary, event counts, failure rate</div>
+  </a>
+  <a href="/admin/reports/events" class="bg-white rounded-lg shadow p-6 hover:shadow-md transition">
+    <div class="text-lg font-semibold text-gray-800">Event Log</div>
+    <div class="text-sm text-gray-500 mt-1">Recent events with filtering</div>
+  </a>
+  <a href="/admin/reports/metrics" class="bg-white rounded-lg shadow p-6 hover:shadow-md transition">
+    <div class="text-lg font-semibold text-gray-800">Metrics</div>
+    <div class="text-sm text-gray-500 mt-1">Event distribution and outcomes</div>
+  </a>
+</div>
+</div></body></html>`)
+}
+
+func (h *AdminHandler) handleSystemOverview(c *fiber.Ctx) error {
+	if h.observability == nil {
+		return c.Type("html").SendString(`<!DOCTYPE html>
+<html><head><title>System Overview - Wakaba Admin</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head><body class="bg-gray-50 min-h-screen">
+<div class="max-w-6xl mx-auto px-6 py-8">
+<h1 class="text-2xl font-bold text-gray-800 mb-4">System Overview</h1>
+<p class="text-gray-500">Observability service not configured.</p>
+</div></body></html>`)
+	}
+
+	summary, err := h.observability.GetWorldSummary(c.Context())
+	if err != nil {
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.Type("html").SendString(func() string {
+		base := fmt.Sprintf(`<!DOCTYPE html>
+<html><head><title>System Overview - Wakaba Admin</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head><body class="bg-gray-50 min-h-screen">
+<div class="max-w-6xl mx-auto px-6 py-8">
+<div class="flex items-center gap-4 mb-6">
+  <a href="/admin/reports" class="text-gray-500 hover:text-gray-700">&larr; Back</a>
+  <h1 class="text-2xl font-bold text-gray-800">System Overview</h1>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+  <div class="bg-white rounded-lg shadow p-4">
+    <div class="text-2xl font-bold text-[#008069]">%d</div>
+    <div class="text-sm text-gray-500">Consumers</div>
+  </div>
+  <div class="bg-white rounded-lg shadow p-4">
+    <div class="text-2xl font-bold text-[#008069]">%d</div>
+    <div class="text-sm text-gray-500">Events (24h)</div>
+  </div>
+  <div class="bg-white rounded-lg shadow p-4">
+    <div class="text-2xl font-bold text-red-600">%d</div>
+    <div class="text-sm text-gray-500">Failures (24h)</div>
+  </div>
+  <div class="bg-white rounded-lg shadow p-4">
+    <div class="text-2xl font-bold text-[#008069]">%.1f%%</div>
+    <div class="text-sm text-gray-500">Failure Rate</div>
+  </div>
+</div>
+<h2 class="text-lg font-semibold text-gray-800 mb-3">Events by Type (24h)</h2>
+<div class="bg-white rounded-lg shadow overflow-hidden mb-8">
+<table class="w-full text-sm">
+<thead class="bg-gray-50"><tr><th class="px-4 py-2 text-left">Event Type</th><th class="px-4 py-2 text-right">Count</th></tr></thead>
+<tbody>`, summary.ConsumerCount, summary.EventCount, summary.FailureCount,
+			func() float64 {
+				if summary.EventCount > 0 {
+					return float64(summary.FailureCount) / float64(summary.EventCount) * 100
+				}
+				return 0
+			}())
+
+		typeRows := ""
+		for et, count := range summary.EventsByType {
+			typeRows += fmt.Sprintf(`<tr class="border-t"><td class="px-4 py-2">%s</td><td class="px-4 py-2 text-right font-mono">%d</td></tr>`, et, count)
+		}
+		if typeRows == "" {
+			typeRows = `<tr><td colspan="2" class="px-4 py-2 text-gray-400">No events recorded</td></tr>`
+		}
+
+		outcomeRows := ""
+		for outcome, count := range summary.EventsByOutcome {
+			outcomeRows += fmt.Sprintf(`<tr class="border-t"><td class="px-4 py-2">%s</td><td class="px-4 py-2 text-right font-mono">%d</td></tr>`, outcome, count)
+		}
+		if outcomeRows == "" {
+			outcomeRows = `<tr><td colspan="2" class="px-4 py-2 text-gray-400">No outcomes recorded</td></tr>`
+		}
+
+		return base + typeRows + `</tbody></table></div>
+<h2 class="text-lg font-semibold text-gray-800 mb-3">Outcomes (24h)</h2>
+<div class="bg-white rounded-lg shadow overflow-hidden">
+<table class="w-full text-sm">
+<thead class="bg-gray-50"><tr><th class="px-4 py-2 text-left">Outcome</th><th class="px-4 py-2 text-right">Count</th></tr></thead>
+<tbody>` + outcomeRows + `</tbody></table></div>
+</div></body></html>`
+	}())
+}
+
+func (h *AdminHandler) handleEventLog(c *fiber.Ctx) error {
+	if h.observability == nil {
+		return c.Type("html").SendString(`<!DOCTYPE html>
+<html><head><title>Event Log - Wakaba Admin</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head><body class="bg-gray-50 min-h-screen">
+<div class="max-w-6xl mx-auto px-6 py-8">
+<h1 class="text-2xl font-bold text-gray-800 mb-4">Event Log</h1>
+<p class="text-gray-500">Observability service not configured.</p>
+</div></body></html>`)
+	}
+
+	result, err := h.observability.ListEvents(c.Context(), ports.EventFilter{Limit: 50})
+	if err != nil {
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.Type("html").SendString(func() string {
+		base := fmt.Sprintf(`<!DOCTYPE html>
+<html><head><title>Event Log - Wakaba Admin</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head><body class="bg-gray-50 min-h-screen">
+<div class="max-w-6xl mx-auto px-6 py-8">
+<div class="flex items-center gap-4 mb-6">
+  <a href="/admin/reports" class="text-gray-500 hover:text-gray-700">&larr; Back</a>
+  <h1 class="text-2xl font-bold text-gray-800">Event Log</h1>
+  <span class="text-sm text-gray-500">%d total</span>
+</div>
+<div class="bg-white rounded-lg shadow overflow-hidden">
+<table class="w-full text-sm">
+<thead class="bg-gray-50">
+<tr>
+  <th class="px-4 py-2 text-left">Time</th>
+  <th class="px-4 py-2 text-left">Type</th>
+  <th class="px-4 py-2 text-left">Source</th>
+  <th class="px-4 py-2 text-left">Outcome</th>
+  <th class="px-4 py-2 text-left">Trace ID</th>
+  <th class="px-4 py-2 text-left">Message ID</th>
+</tr>
+</thead>
+<tbody>`, result.Total)
+
+		rows := ""
+		for _, ev := range result.Events {
+			traceShort := string(ev.TraceID)
+			if len(traceShort) > 12 {
+				traceShort = traceShort[:12] + "..."
+			}
+			msgShort := ev.MessageID
+			if len(msgShort) > 12 {
+				msgShort = msgShort[:12] + "..."
+			}
+			outcomeClass := "text-gray-600"
+			if ev.Outcome == domain.EventOutcomeFailure {
+				outcomeClass = "text-red-600 font-semibold"
+			}
+			rows += fmt.Sprintf(`<tr class="border-t hover:bg-gray-50">
+<td class="px-4 py-2 font-mono text-xs">%s</td>
+<td class="px-4 py-2">%s</td>
+<td class="px-4 py-2 text-gray-500">%s</td>
+<td class="px-4 py-2 %s">%s</td>
+<td class="px-4 py-2 font-mono text-xs text-gray-500">%s</td>
+<td class="px-4 py-2 font-mono text-xs text-gray-500">%s</td>
+</tr>`, ev.Timestamp.Format("15:04:05.000"), ev.Type, ev.Source, outcomeClass, ev.Outcome, traceShort, msgShort)
+		}
+		if rows == "" {
+			rows = `<tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">No events recorded</td></tr>`
+		}
+
+		return base + rows + `</tbody></table></div>
+</div></body></html>`
+	}())
+}
+
+func (h *AdminHandler) handleMetrics(c *fiber.Ctx) error {
+	if h.observability == nil {
+		return c.Type("html").SendString(`<!DOCTYPE html>
+<html><head><title>Metrics - Wakaba Admin</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head><body class="bg-gray-50 min-h-screen">
+<div class="max-w-6xl mx-auto px-6 py-8">
+<h1 class="text-2xl font-bold text-gray-800 mb-4">Metrics</h1>
+<p class="text-gray-500">Observability service not configured.</p>
+</div></body></html>`)
+	}
+
+	summary, err := h.observability.GetMetricsSummary(c.Context(), 24*time.Hour)
+	if err != nil {
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.Type("html").SendString(func() string {
+		base := fmt.Sprintf(`<!DOCTYPE html>
+<html><head><title>Metrics - Wakaba Admin</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head><body class="bg-gray-50 min-h-screen">
+<div class="max-w-6xl mx-auto px-6 py-8">
+<div class="flex items-center gap-4 mb-6">
+  <a href="/admin/reports" class="text-gray-500 hover:text-gray-700">&larr; Back</a>
+  <h1 class="text-2xl font-bold text-gray-800">Metrics</h1>
+  <span class="text-sm text-gray-500">Last %s</span>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+  <div class="bg-white rounded-lg shadow p-4">
+    <div class="text-2xl font-bold text-[#008069]">%d</div>
+    <div class="text-sm text-gray-500">Total Events</div>
+  </div>
+  <div class="bg-white rounded-lg shadow p-4">
+    <div class="text-2xl font-bold text-red-600">%.1f%%</div>
+    <div class="text-sm text-gray-500">Failure Rate</div>
+  </div>
+  <div class="bg-white rounded-lg shadow p-4">
+    <div class="text-2xl font-bold text-[#008069]">%d</div>
+    <div class="text-sm text-gray-500">Event Types</div>
+  </div>
+</div>
+<h2 class="text-lg font-semibold text-gray-800 mb-3">Event Distribution</h2>
+<div class="bg-white rounded-lg shadow overflow-hidden mb-8">
+<table class="w-full text-sm">
+<thead class="bg-gray-50"><tr><th class="px-4 py-2 text-left">Event Type</th><th class="px-4 py-2 text-right">Count</th><th class="px-4 py-2 text-right">%%</th></tr></thead>
+<tbody>`, summary.Period, summary.TotalEvents, summary.FailureRate, len(summary.EventsByType))
+
+		typeRows := ""
+		for et, count := range summary.EventsByType {
+			pct := float64(0)
+			if summary.TotalEvents > 0 {
+				pct = float64(count) / float64(summary.TotalEvents) * 100
+			}
+			typeRows += fmt.Sprintf(`<tr class="border-t"><td class="px-4 py-2">%s</td><td class="px-4 py-2 text-right font-mono">%d</td><td class="px-4 py-2 text-right text-gray-500">%.1f</td></tr>`, et, count, pct)
+		}
+		if typeRows == "" {
+			typeRows = `<tr><td colspan="3" class="px-4 py-2 text-gray-400">No data</td></tr>`
+		}
+
+		outcomeRows := ""
+		for outcome, count := range summary.EventsByOutcome {
+			pct := float64(0)
+			if summary.TotalEvents > 0 {
+				pct = float64(count) / float64(summary.TotalEvents) * 100
+			}
+			outcomeRows += fmt.Sprintf(`<tr class="border-t"><td class="px-4 py-2">%s</td><td class="px-4 py-2 text-right font-mono">%d</td><td class="px-4 py-2 text-right text-gray-500">%.1f</td></tr>`, outcome, count, pct)
+		}
+		if outcomeRows == "" {
+			outcomeRows = `<tr><td colspan="3" class="px-4 py-2 text-gray-400">No data</td></tr>`
+		}
+
+		return base + typeRows + `</tbody></table></div>
+<h2 class="text-lg font-semibold text-gray-800 mb-3">Outcomes</h2>
+<div class="bg-white rounded-lg shadow overflow-hidden">
+<table class="w-full text-sm">
+<thead class="bg-gray-50"><tr><th class="px-4 py-2 text-left">Outcome</th><th class="px-4 py-2 text-right">Count</th><th class="px-4 py-2 text-right">%%</th></tr></thead>
+<tbody>` + outcomeRows + `</tbody></table></div>
+</div></body></html>`
+	}())
 }

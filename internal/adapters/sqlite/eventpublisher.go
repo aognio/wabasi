@@ -26,9 +26,17 @@ func (p *EventPublisher) Publish(ctx context.Context, event *domain.DomainEvent)
 	}
 
 	record := EventRecord{
-		ExternalID: string(event.ID),
-		Type:       string(event.Type),
-		Payload:    string(payload),
+		ExternalID:     string(event.ID),
+		Type:           string(event.Type),
+		Payload:        string(payload),
+		TraceID:        string(event.TraceID),
+		Source:         string(event.Source),
+		ActorID:        event.ActorID,
+		ConversationID: event.ConversationID,
+		MessageID:      event.MessageID,
+		ApplicationID:  event.ApplicationID,
+		Outcome:        string(event.Outcome),
+		DurationMs:     event.DurationMs,
 	}
 
 	if err := p.db.Create(&record).Error; err != nil {
@@ -39,6 +47,8 @@ func (p *EventPublisher) Publish(ctx context.Context, event *domain.DomainEvent)
 	p.logger.Info("event published",
 		"event_id", event.ID,
 		"type", event.Type,
+		"source", event.Source,
+		"trace_id", event.TraceID,
 		"timestamp", event.Timestamp,
 	)
 

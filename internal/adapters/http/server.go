@@ -160,10 +160,95 @@ func (s *Server) handleSendMessage(c *fiber.Ctx) error {
 		MessagingProduct string `json:"messaging_product"`
 		To               string `json:"to"`
 		Type             string `json:"type"`
+		RecipientType    string `json:"recipient_type"`
 		Text             *struct {
 			PreviewURL bool   `json:"preview_url"`
 			Body       string `json:"body"`
 		} `json:"text,omitempty"`
+		Image *struct {
+			ID     string `json:"id"`
+			Caption string `json:"caption,omitempty"`
+		} `json:"image,omitempty"`
+		Video *struct {
+			ID     string `json:"id"`
+			Caption string `json:"caption,omitempty"`
+		} `json:"video,omitempty"`
+		Audio *struct {
+			ID string `json:"id"`
+		} `json:"audio,omitempty"`
+		Document *struct {
+			ID       string `json:"id"`
+			Caption  string `json:"caption,omitempty"`
+			Filename string `json:"filename,omitempty"`
+		} `json:"document,omitempty"`
+		Location *struct {
+			Latitude  float64 `json:"latitude"`
+			Longitude float64 `json:"longitude"`
+			Name      string  `json:"name,omitempty"`
+			Address   string  `json:"address,omitempty"`
+		} `json:"location,omitempty"`
+		Contacts *struct {
+			Contacts []struct {
+				Name *struct {
+					FirstName     string `json:"first_name,omitempty"`
+					LastName      string `json:"last_name,omitempty"`
+					FormattedName string `json:"formatted_name,omitempty"`
+				} `json:"name,omitempty"`
+				Phones []struct {
+					Phone string `json:"phone"`
+					Type  string `json:"type,omitempty"`
+					WAID  string `json:"wa_id,omitempty"`
+				} `json:"phones,omitempty"`
+			} `json:"contacts"`
+		} `json:"contacts,omitempty"`
+		Template *struct {
+			Name     string `json:"name"`
+			Language struct {
+				Code string `json:"code"`
+			} `json:"language"`
+			Components []struct {
+				Type       string `json:"type"`
+				SubType    string `json:"sub_type,omitempty"`
+				Index      int    `json:"index,omitempty"`
+				Parameters []struct {
+					Type string `json:"type"`
+					Text string `json:"text,omitempty"`
+				} `json:"parameters,omitempty"`
+			} `json:"components,omitempty"`
+		} `json:"template,omitempty"`
+		Interactive *struct {
+			Type   string `json:"type"`
+			Header *struct {
+				Type string `json:"type"`
+				Text string `json:"text,omitempty"`
+			} `json:"header,omitempty"`
+			Body struct {
+				Text string `json:"text"`
+			} `json:"body"`
+			Foot *struct {
+				Text string `json:"text"`
+			} `json:"foot,omitempty"`
+			Action struct {
+				Buttons []struct {
+					Type string `json:"type"`
+					Text string `json:"text,omitempty"`
+					ID   string `json:"id,omitempty"`
+				} `json:"buttons,omitempty"`
+				Sections []struct {
+					Title string `json:"title,omitempty"`
+					Rows  []struct {
+						ID          string `json:"id"`
+						Title       string `json:"title"`
+						Description string `json:"description,omitempty"`
+					} `json:"rows,omitempty"`
+				} `json:"sections,omitempty"`
+				Button string `json:"button,omitempty"`
+			} `json:"action"`
+		} `json:"interactive,omitempty"`
+		Reaction *struct {
+			MessageID string `json:"message_id"`
+			Emoji     string `json:"emoji"`
+		} `json:"reaction,omitempty"`
 	}
 
 	if err := c.BodyParser(&req); err != nil {
@@ -184,23 +269,176 @@ func (s *Server) handleSendMessage(c *fiber.Ctx) error {
 		)
 	}
 
-	if req.Type != "text" {
+	msgType := domain.MessageType(req.Type)
+	sendReq := &application.SendMessageRequest{
+		From:          phoneNumberID,
+		To:            req.To,
+		Type:          msgType,
+		PhoneNumberID: phoneNumberID,
+	}
+
+	switch msgType {
+	case domain.MessageTypeText:
+		if req.Text == nil || req.Text.Body == "" {
+			return c.Status(http.StatusBadRequest).JSON(
+				domain.NewMetaErrorResponse(100, "OAuthException", "Invalid parameter", "text.body is required"),
+			)
+		}
+		sendReq.Body = req.Text.Body
+		sendReq.PreviewURL = req.Text.PreviewURL
+
+	case domain.MessageTypeImage:
+		if req.Image == nil || req.Image.ID == "" {
+			return c.Status(http.StatusBadRequest).JSON(
+				domain.NewMetaErrorResponse(100, "OAuthException", "Invalid parameter", "image.id is required"),
+			)
+		}
+		sendReq.MediaID = req.Image.ID
+		sendReq.Caption = req.Image.Caption
+
+	case domain.MessageTypeVideo:
+		if req.Video == nil || req.Video.ID == "" {
+			return c.Status(http.StatusBadRequest).JSON(
+				domain.NewMetaErrorResponse(100, "OAuthException", "Invalid parameter", "video.id is required"),
+			)
+		}
+		sendReq.MediaID = req.Video.ID
+		sendReq.Caption = req.Video.Caption
+
+	case domain.MessageTypeAudio:
+		if req.Audio == nil || req.Audio.ID == "" {
+			return c.Status(http.StatusBadRequest).JSON(
+				domain.NewMetaErrorResponse(100, "OAuthException", "Invalid parameter", "audio.id is required"),
+			)
+		}
+		sendReq.MediaID = req.Audio.ID
+
+	case domain.MessageTypeDocument:
+		if req.Document == nil || req.Document.ID == "" {
+			return c.Status(http.StatusBadRequest).JSON(
+				domain.NewMetaErrorResponse(100, "OAuthException", "Invalid parameter", "document.id is required"),
+			)
+		}
+		sendReq.MediaID = req.Document.ID
+		sendReq.Caption = req.Document.Caption
+		sendReq.Filename = req.Document.Filename
+
+	case domain.MessageTypeLocation:
+		if req.Location == nil {
+			return c.Status(http.StatusBadRequest).JSON(
+				domain.NewMetaErrorResponse(100, "OAuthException", "Invalid parameter", "location is required"),
+			)
+		}
+		sendReq.Location = &application.LocationRequest{
+			Latitude:  req.Location.Latitude,
+			Longitude: req.Location.Longitude,
+			Name:      req.Location.Name,
+			Address:   req.Location.Address,
+		}
+
+	case domain.MessageTypeContacts:
+		if req.Contacts == nil || len(req.Contacts.Contacts) == 0 {
+			return c.Status(http.StatusBadRequest).JSON(
+				domain.NewMetaErrorResponse(100, "OAuthException", "Invalid parameter", "contacts is required"),
+			)
+		}
+		for _, c := range req.Contacts.Contacts {
+			cr := application.ContactRequest{}
+			if c.Name != nil {
+				cr.Name = &application.ContactNameRequest{
+					FirstName:     c.Name.FirstName,
+					LastName:      c.Name.LastName,
+					FormattedName: c.Name.FormattedName,
+				}
+			}
+			for _, p := range c.Phones {
+				cr.Phones = append(cr.Phones, application.ContactPhoneRequest{
+					Phone: p.Phone,
+					Type:  p.Type,
+					WAID:  p.WAID,
+				})
+			}
+			sendReq.Contacts = append(sendReq.Contacts, cr)
+		}
+
+	case domain.MessageTypeTemplate:
+		if req.Template == nil {
+			return c.Status(http.StatusBadRequest).JSON(
+				domain.NewMetaErrorResponse(100, "OAuthException", "Invalid parameter", "template is required"),
+			)
+		}
+		sendReq.Template = &application.TemplateRequest{
+			Name:     req.Template.Name,
+			Language: req.Template.Language.Code,
+		}
+		for _, comp := range req.Template.Components {
+			cr := application.TemplateComponentRequest{
+				Type:    comp.Type,
+				SubType: comp.SubType,
+				Index:   comp.Index,
+			}
+			for _, p := range comp.Parameters {
+				cr.Parameters = append(cr.Parameters, application.TemplateParameterRequest{
+					Type: p.Type,
+					Text: p.Text,
+				})
+			}
+			sendReq.Template.Components = append(sendReq.Template.Components, cr)
+		}
+
+	case domain.MessageTypeInteractive:
+		if req.Interactive == nil {
+			return c.Status(http.StatusBadRequest).JSON(
+				domain.NewMetaErrorResponse(100, "OAuthException", "Invalid parameter", "interactive is required"),
+			)
+		}
+		sendReq.Interactive = &application.InteractiveRequest{
+			Type: req.Interactive.Type,
+			Body: req.Interactive.Body.Text,
+		}
+		if req.Interactive.Header != nil {
+			sendReq.Interactive.Header = &application.InteractiveHeaderRequest{
+				Type: req.Interactive.Header.Type,
+				Text: req.Interactive.Header.Text,
+			}
+		}
+		if req.Interactive.Foot != nil {
+			sendReq.Interactive.Foot = req.Interactive.Foot.Text
+		}
+		for _, btn := range req.Interactive.Action.Buttons {
+			sendReq.Interactive.Buttons = append(sendReq.Interactive.Buttons, application.InteractiveButtonRequest{
+				Type: btn.Type,
+				Text: btn.Text,
+				ID:   btn.ID,
+			})
+		}
+		for _, sec := range req.Interactive.Action.Sections {
+			sr := application.InteractiveSectionRequest{Title: sec.Title}
+			for _, row := range sec.Rows {
+				sr.Rows = append(sr.Rows, application.InteractiveRowRequest{
+					ID:          row.ID,
+					Title:       row.Title,
+					Description: row.Description,
+				})
+			}
+			sendReq.Interactive.Sections = append(sendReq.Interactive.Sections, sr)
+		}
+		sendReq.Interactive.Button = req.Interactive.Action.Button
+
+	case domain.MessageTypeReaction:
+		if req.Reaction == nil {
+			return c.Status(http.StatusBadRequest).JSON(
+				domain.NewMetaErrorResponse(100, "OAuthException", "Invalid parameter", "reaction is required"),
+			)
+		}
+		sendReq.ReactionMessageID = req.Reaction.MessageID
+		sendReq.ReactionEmoji = req.Reaction.Emoji
+
+	default:
 		return c.Status(http.StatusBadRequest).JSON(domain.ErrUnsupportedMessageType())
 	}
 
-	if req.Text == nil || req.Text.Body == "" {
-		return c.Status(http.StatusBadRequest).JSON(
-			domain.NewMetaErrorResponse(100, "OAuthException", "Invalid parameter", "text.body is required"),
-		)
-	}
-
-	resp, err := s.messaging.SendMessage(c.Context(), &application.SendMessageRequest{
-		From:          phoneNumberID,
-		To:            req.To,
-		Type:          domain.MessageTypeText,
-		Body:          req.Text.Body,
-		PhoneNumberID: phoneNumberID,
-	})
+	resp, err := s.messaging.SendMessage(c.Context(), sendReq)
 	if err != nil {
 		s.logger.Error("failed to send message", "error", err)
 		return c.Status(http.StatusInternalServerError).JSON(
@@ -252,6 +490,63 @@ func (s *Server) handleWebhookReceive(c *fiber.Ctx) error {
 						Text      *struct {
 							Body string `json:"body"`
 						} `json:"text,omitempty"`
+						Image *struct {
+							ID     string `json:"id"`
+							MimeType string `json:"mime_type,omitempty"`
+							Caption  string `json:"caption,omitempty"`
+						} `json:"image,omitempty"`
+						Video *struct {
+							ID     string `json:"id"`
+							MimeType string `json:"mime_type,omitempty"`
+							Caption  string `json:"caption,omitempty"`
+						} `json:"video,omitempty"`
+						Audio *struct {
+							ID     string `json:"id"`
+							MimeType string `json:"mime_type,omitempty"`
+						} `json:"audio,omitempty"`
+						Document *struct {
+							ID       string `json:"id"`
+							MimeType string `json:"mime_type,omitempty"`
+							Caption  string `json:"caption,omitempty"`
+							Filename string `json:"filename,omitempty"`
+						} `json:"document,omitempty"`
+						Location *struct {
+							Latitude  float64 `json:"latitude"`
+							Longitude float64 `json:"longitude"`
+							Name      string  `json:"name,omitempty"`
+							Address   string  `json:"address,omitempty"`
+						} `json:"location,omitempty"`
+						Contacts *struct {
+							Contacts []struct {
+								Name *struct {
+									FirstName     string `json:"first_name,omitempty"`
+									LastName      string `json:"last_name,omitempty"`
+									FormattedName string `json:"formatted_name,omitempty"`
+								} `json:"name,omitempty"`
+								Phones []struct {
+									Phone string `json:"phone"`
+									Type  string `json:"type,omitempty"`
+									WAID  string `json:"wa_id,omitempty"`
+								} `json:"phones,omitempty"`
+							} `json:"contacts"`
+						} `json:"contacts,omitempty"`
+						Interactive *struct {
+							Type   string `json:"type"`
+							ButtonID string `json:"button,omitempty"`
+							 ListReply *struct {
+								ID          string `json:"id"`
+								Title       string `json:"title"`
+								Description string `json:"description,omitempty"`
+							} `json:"list_reply,omitempty"`
+							ButtonReply *struct {
+								ID   string `json:"id"`
+								Text string `json:"title"`
+							} `json:"button_reply,omitempty"`
+						} `json:"interactive,omitempty"`
+						Reaction *struct {
+							MessageID string `json:"message_id"`
+							Emoji     string `json:"emoji"`
+						} `json:"reaction,omitempty"`
 					} `json:"messages,omitempty"`
 					Statuses []struct {
 						ID          string `json:"id"`
@@ -277,25 +572,102 @@ func (s *Server) handleWebhookReceive(c *fiber.Ctx) error {
 		for _, change := range entry.Changes {
 			phoneID := change.Value.Metadata.PhoneNumberID
 			for _, msg := range change.Value.Messages {
-				s.logger.Info("inbound message", "from", msg.From, "to", phoneID)
-				if msg.Type == "text" && msg.Text != nil {
-					resp, err := s.messaging.ReceiveMessage(c.Context(), &application.ReceiveMessageRequest{
-						From:          msg.From,
-						To:            phoneID,
-						Type:          domain.MessageTypeText,
-						Body:          msg.Text.Body,
-						PhoneNumberID: phoneID,
-						WAMessageID:   msg.ID,
-					})
-					if err != nil {
-						s.logger.Error("failed to process inbound", "error", err)
-					} else {
-						s.notifySSE(msg.From, map[string]interface{}{
-							"type":           "new_message",
-							"message_id":     resp.MessageID,
-							"conversation_id": "",
-						})
+				s.logger.Info("inbound message", "from", msg.From, "to", phoneID, "type", msg.Type)
+
+				recvReq := &application.ReceiveMessageRequest{
+					From:          msg.From,
+					To:            phoneID,
+					Type:          domain.MessageType(msg.Type),
+					PhoneNumberID: phoneID,
+					WAMessageID:   msg.ID,
+				}
+
+				switch msg.Type {
+				case "text":
+					if msg.Text != nil {
+						recvReq.Body = msg.Text.Body
 					}
+				case "image":
+					if msg.Image != nil {
+						recvReq.MediaID = msg.Image.ID
+						recvReq.Caption = msg.Image.Caption
+						recvReq.MediaMimeType = msg.Image.MimeType
+					}
+				case "video":
+					if msg.Video != nil {
+						recvReq.MediaID = msg.Video.ID
+						recvReq.Caption = msg.Video.Caption
+						recvReq.MediaMimeType = msg.Video.MimeType
+					}
+				case "audio":
+					if msg.Audio != nil {
+						recvReq.MediaID = msg.Audio.ID
+						recvReq.MediaMimeType = msg.Audio.MimeType
+					}
+				case "document":
+					if msg.Document != nil {
+						recvReq.MediaID = msg.Document.ID
+						recvReq.Caption = msg.Document.Caption
+						recvReq.Filename = msg.Document.Filename
+						recvReq.MediaMimeType = msg.Document.MimeType
+					}
+				case "location":
+					if msg.Location != nil {
+						recvReq.Location = &application.LocationRequest{
+							Latitude:  msg.Location.Latitude,
+							Longitude: msg.Location.Longitude,
+							Name:      msg.Location.Name,
+							Address:   msg.Location.Address,
+						}
+					}
+				case "contacts":
+					if msg.Contacts != nil {
+						for _, c := range msg.Contacts.Contacts {
+							cr := application.ContactRequest{}
+							if c.Name != nil {
+								cr.Name = &application.ContactNameRequest{
+									FirstName:     c.Name.FirstName,
+									LastName:      c.Name.LastName,
+									FormattedName: c.Name.FormattedName,
+								}
+							}
+							for _, p := range c.Phones {
+								cr.Phones = append(cr.Phones, application.ContactPhoneRequest{
+									Phone: p.Phone, Type: p.Type, WAID: p.WAID,
+								})
+							}
+							recvReq.Contacts = append(recvReq.Contacts, cr)
+						}
+					}
+				case "interactive":
+					if msg.Interactive != nil {
+						recvReq.InteractiveType = msg.Interactive.Type
+						if msg.Interactive.ButtonID != "" {
+							recvReq.InteractiveButtonID = msg.Interactive.ButtonID
+						}
+						if msg.Interactive.ListReply != nil {
+							recvReq.InteractiveButtonID = msg.Interactive.ListReply.ID
+						}
+						if msg.Interactive.ButtonReply != nil {
+							recvReq.InteractiveButtonID = msg.Interactive.ButtonReply.ID
+						}
+					}
+				case "reaction":
+					if msg.Reaction != nil {
+						recvReq.ReactionMessageID = msg.Reaction.MessageID
+						recvReq.ReactionEmoji = msg.Reaction.Emoji
+					}
+				}
+
+				resp, err := s.messaging.ReceiveMessage(c.Context(), recvReq)
+				if err != nil {
+					s.logger.Error("failed to process inbound", "error", err)
+				} else {
+					s.notifySSE(msg.From, map[string]interface{}{
+						"type":           "new_message",
+						"message_id":     resp.MessageID,
+						"conversation_id": "",
+					})
 				}
 			}
 			for _, status := range change.Value.Statuses {

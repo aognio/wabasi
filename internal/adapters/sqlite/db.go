@@ -23,6 +23,12 @@ func Open(dbPath string) (*gorm.DB, error) {
 		&PhoneNumberRecord{},
 		&EventRecord{},
 		&WebhookDeliveryRecord{},
+		&BusinessRecord{},
+		&WABARecord{},
+		&BusinessPhoneNumberRecord{},
+		&ApplicationRecord{},
+		&CredentialRecord{},
+		&WebhookConfigRecord{},
 	); err != nil {
 		return nil, fmt.Errorf("auto-migrate: %w", err)
 	}

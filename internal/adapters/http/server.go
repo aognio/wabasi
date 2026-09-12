@@ -586,6 +586,11 @@ func (s *Server) handleSSE(c *fiber.Ctx) error {
 	}
 }
 
+func (s *Server) RegisterAdmin(admin *application.AdminService, messaging *application.MessagingService) {
+	adminHandler := NewAdminHandler(admin, messaging)
+	adminHandler.Register(s.app)
+}
+
 func (s *Server) Listen(addr string) error {
 	return s.app.Listen(addr)
 }

@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
 
 	"github.com/wakaba/wakaba/internal/adapters/http"
 	sqliteAdapter "github.com/wakaba/wakaba/internal/adapters/sqlite"
+	"github.com/wakaba/wakaba/internal/adapters/webhook"
 	"github.com/wakaba/wakaba/internal/application"
 )
 
@@ -33,6 +35,13 @@ func main() {
 	eventPub := sqliteAdapter.NewEventPublisher(db, logger)
 	webhookDisp := sqliteAdapter.NewWebhookDispatcher(db, logger)
 
+	businessRepo := sqliteAdapter.NewBusinessRepository(db)
+	wabaRepo := sqliteAdapter.NewWABARepository(db)
+	businessPhoneRepo := sqliteAdapter.NewBusinessPhoneNumberRepository(db)
+	appRepo := sqliteAdapter.NewApplicationRepository(db)
+	credentialRepo := sqliteAdapter.NewCredentialRepository(db)
+	webhookConfigRepo := sqliteAdapter.NewWebhookConfigRepository(db)
+
 	messagingSvc := application.NewMessagingService(
 		messageRepo,
 		conversationRepo,
@@ -45,7 +54,23 @@ func main() {
 
 	phoneReg := application.NewPhoneRegistry(phoneRepo)
 
+	adminSvc := application.NewAdminService(
+		businessRepo,
+		wabaRepo,
+		businessPhoneRepo,
+		appRepo,
+		credentialRepo,
+		webhookConfigRepo,
+		phoneReg,
+		eventPub,
+		logger,
+	)
+
+	deliveryWorker := webhook.NewDeliveryWorker(db, logger)
+	deliveryWorker.Start(context.Background())
+
 	server := http.NewServer(messagingSvc, phoneReg, identityRepo, conversationRepo, messageRepo, logger)
+	server.RegisterAdmin(adminSvc, messagingSvc)
 
 	addr := ":8080"
 	if port := os.Getenv("PORT"); port != "" {

@@ -36,6 +36,48 @@ type PhoneNumberRepository interface {
 	GetOwner(ctx context.Context, phone domain.PhoneNumber) (string, string, error)
 }
 
+type BusinessRepository interface {
+	Create(ctx context.Context, b *domain.Business) error
+	GetByID(ctx context.Context, id domain.BusinessID) (*domain.Business, error)
+	List(ctx context.Context) ([]*domain.Business, error)
+}
+
+type WABARepository interface {
+	Create(ctx context.Context, w *domain.WABA) error
+	GetByID(ctx context.Context, id domain.WABAID) (*domain.WABA, error)
+	GetByBusiness(ctx context.Context, businessID domain.BusinessID) ([]*domain.WABA, error)
+	List(ctx context.Context) ([]*domain.WABA, error)
+}
+
+type BusinessPhoneNumberRepository interface {
+	Create(ctx context.Context, p *domain.BusinessPhoneNumber) error
+	GetByID(ctx context.Context, id domain.BusinessPhoneNumberID) (*domain.BusinessPhoneNumber, error)
+	GetByPhone(ctx context.Context, phone domain.PhoneNumber) (*domain.BusinessPhoneNumber, error)
+	GetByWABA(ctx context.Context, wabaID domain.WABAID) ([]*domain.BusinessPhoneNumber, error)
+	List(ctx context.Context) ([]*domain.BusinessPhoneNumber, error)
+}
+
+type ApplicationRepository interface {
+	Create(ctx context.Context, a *domain.Application) error
+	GetByID(ctx context.Context, id domain.ApplicationID) (*domain.Application, error)
+	GetByBusiness(ctx context.Context, businessID domain.BusinessID) ([]*domain.Application, error)
+	List(ctx context.Context) ([]*domain.Application, error)
+}
+
+type CredentialRepository interface {
+	Create(ctx context.Context, c *domain.Credential) error
+	GetByID(ctx context.Context, id domain.CredentialID) (*domain.Credential, error)
+	GetByTokenHash(ctx context.Context, tokenHash string) (*domain.Credential, error)
+	GetByApplication(ctx context.Context, appID domain.ApplicationID) ([]*domain.Credential, error)
+	Revoke(ctx context.Context, id domain.CredentialID) error
+}
+
+type WebhookConfigRepository interface {
+	Create(ctx context.Context, w *domain.WebhookConfig) error
+	GetByApplication(ctx context.Context, appID domain.ApplicationID) (*domain.WebhookConfig, error)
+	Update(ctx context.Context, w *domain.WebhookConfig) error
+}
+
 type EventPublisher interface {
 	Publish(ctx context.Context, event *domain.DomainEvent) error
 }

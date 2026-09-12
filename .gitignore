@@ -1,0 +1,8 @@
+.development/
+var/
+*.db
+*.exe
+/dist/
+/tmp/
+.env
+wakaba

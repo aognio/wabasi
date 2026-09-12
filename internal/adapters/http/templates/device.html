@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wakaba — {{.Identity.DisplayName}}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+        .chat-scroll { scroll-behavior: smooth; }
+        .chat-scroll::-webkit-scrollbar { width: 6px; }
+        .chat-scroll::-webkit-scrollbar-track { background: transparent; }
+        .chat-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    </style>
+</head>
+<body class="bg-[#efeae2] h-screen flex flex-col" x-data="chat()" x-init="init()">
+    <!-- Header -->
+    <div class="bg-[#008069] text-white px-4 py-3 flex items-center gap-3 shadow-md">
+        <div class="w-10 h-10 rounded-full bg-[#d9fdd3] flex items-center justify-center text-[#008069] font-bold text-lg">
+            {{.Identity.DisplayName | index 0}}
+        </div>
+        <div>
+            <div class="font-semibold">{{.Identity.DisplayName}}</div>
+            <div class="text-xs text-green-100">{{.Identity.Phone}}</div>
+        </div>
+        <div class="ml-auto text-xs text-green-100">Wakaba Virtual Network</div>
+    </div>
+
+    <div class="flex-1 flex overflow-hidden">
+        <!-- Conversation List -->
+        <div class="w-80 bg-white border-r border-gray-200 flex flex-col">
+            <div class="p-3 border-b border-gray-100">
+                <input type="text" placeholder="Search or start new chat"
+                    class="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#008069]"
+                    x-model="searchQuery">
+            </div>
+            <div class="flex-1 overflow-y-auto">
+                <template x-for="conv in filteredConversations" :key="conv.id">
+                    <div @click="selectConversation(conv)"
+                        class="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 border-b border-gray-100"
+                        :class="{'bg-gray-100': selectedConv?.id === conv.id}">
+                        <div class="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-semibold"
+                            x-text="conv.name?.charAt(0) || '?'"></div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-baseline">
+                                <span class="font-medium text-sm truncate" x-text="conv.name || conv.phone"></span>
+                                <span class="text-xs text-gray-400" x-text="formatTime(conv.last_message_at)"></span>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <span class="text-sm text-gray-500 truncate" x-text="conv.last_message || ''"></span>
+                                <span x-show="conv.unread_count > 0"
+                                    class="ml-auto bg-[#25d366] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center"
+                                    x-text="conv.unread_count"></span>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+                <div x-show="filteredConversations.length === 0" class="p-6 text-center text-gray-400 text-sm">
+                    No conversations yet. Start one!
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Area -->
+        <div class="flex-1 flex flex-col" x-show="selectedConv">
+            <!-- Chat Header -->
+            <div class="bg-gray-100 px-4 py-2 flex items-center gap-3 border-b border-gray-200">
+                <div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-semibold"
+                    x-text="selectedConv?.name?.charAt(0) || '?'"></div>
+                <div>
+                    <div class="font-medium text-sm" x-text="selectedConv?.name || selectedConv?.phone"></div>
+                    <div class="text-xs text-gray-500" x-text="selectedConv?.phone"></div>
+                </div>
+            </div>
+
+            <!-- Messages -->
+            <div class="flex-1 overflow-y-auto chat-scroll px-16 py-4 bg-[#efeae2] bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0icmdiYSgwLDAsMCwwLjAzKSIvPjwvc3ZnPg==')]"
+                x-ref="messagesContainer">
+                <template x-for="msg in messages" :key="msg.id">
+                    <div class="flex mb-2"
+                        :class="msg.direction === 'outbound' ? 'justify-end' : 'justify-start'">
+                        <div class="max-w-[65%] px-3 py-2 rounded-lg shadow-sm relative"
+                            :class="msg.direction === 'outbound' ? 'bg-[#d9fdd3] rounded-tr-none' : 'bg-white rounded-tl-none'">
+                            <div class="text-sm" x-text="msg.text?.body || ''"></div>
+                            <div class="flex items-center gap-1 justify-end mt-1">
+                                <span class="text-[10px] text-gray-500" x-text="formatTime(msg.timestamp)"></span>
+                                <template x-if="msg.direction === 'outbound'">
+                                    <span class="text-[10px]" :class="statusColor(msg.status)">
+                                        <span x-show="msg.status === 'pending'">🕐</span>
+                                        <span x-show="msg.status === 'sent'">✓</span>
+                                        <span x-show="msg.status === 'delivered'">✓✓</span>
+                                        <span x-show="msg.status === 'read'">✓✓</span>
+                                        <span x-show="msg.status === 'failed'">⚠</span>
+                                    </span>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Composer -->
+            <div class="bg-gray-100 px-4 py-3 flex items-center gap-2">
+                <input type="text" x-model="newMessage" @keydown.enter="sendMessage()"
+                    placeholder="Type a message"
+                    class="flex-1 px-4 py-2 bg-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#008069]">
+                <button @click="sendMessage()"
+                    class="w-10 h-10 bg-[#008069] text-white rounded-full flex items-center justify-center hover:bg-[#006d5b] transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div class="flex-1 flex items-center justify-center bg-gray-50" x-show="!selectedConv">
+            <div class="text-center text-gray-400">
+                <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                </svg>
+                <p class="text-sm">Select a conversation</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function chat() {
+        return {
+            identity: null,
+            conversations: [],
+            selectedConv: null,
+            messages: [],
+            newMessage: '',
+            searchQuery: '',
+            eventSource: null,
+
+            get filteredConversations() {
+                if (!this.searchQuery) return this.conversations;
+                const q = this.searchQuery.toLowerCase();
+                return this.conversations.filter(c =>
+                    (c.name || '').toLowerCase().includes(q) ||
+                    (c.phone || '').includes(q)
+                );
+            },
+
+            async init() {
+                const resp = await fetch('/device/{{.Token}}/identity');
+                this.identity = await resp.json();
+                await this.loadConversations();
+                this.connectSSE();
+            },
+
+            async loadConversations() {
+                const resp = await fetch('/device/{{.Token}}/conversations');
+                this.conversations = await resp.json();
+            },
+
+            async selectConversation(conv) {
+                this.selectedConv = conv;
+                const resp = await fetch(`/device/{{.Token}}/conversations/${conv.id}/messages`);
+                this.messages = await resp.json();
+                await fetch(`/device/{{.Token}}/conversations/${conv.id}/read`, { method: 'POST' });
+                conv.unread_count = 0;
+                this.$nextTick(() => this.scrollToBottom());
+            },
+
+            async sendMessage() {
+                if (!this.newMessage.trim() || !this.selectedConv) return;
+                const body = this.newMessage.trim();
+                this.newMessage = '';
+
+                await fetch(`/device/{{.Token}}/conversations/${this.selectedConv.id}/messages`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ body })
+                });
+
+                await this.loadConversations();
+                if (this.selectedConv) {
+                    const resp = await fetch(`/device/{{.Token}}/conversations/${this.selectedConv.id}/messages`);
+                    this.messages = await resp.json();
+                    this.$nextTick(() => this.scrollToBottom());
+                }
+            },
+
+            connectSSE() {
+                this.eventSource = new EventSource('/device/{{.Token}}/events');
+                this.eventSource.onmessage = async (event) => {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'new_message') {
+                        await this.loadConversations();
+                        if (this.selectedConv && data.conversation_id === this.selectedConv.id) {
+                            const resp = await fetch(`/device/{{.Token}}/conversations/${this.selectedConv.id}/messages`);
+                            this.messages = await resp.json();
+                            this.$nextTick(() => this.scrollToBottom());
+                        }
+                    }
+                };
+            },
+
+            scrollToBottom() {
+                const el = this.$refs.messagesContainer;
+                if (el) el.scrollTop = el.scrollHeight;
+            },
+
+            formatTime(ts) {
+                if (!ts) return '';
+                const d = new Date(ts);
+                return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            },
+
+            statusColor(status) {
+                if (status === 'read') return 'text-[#53bdeb]';
+                if (status === 'delivered') return 'text-gray-500';
+                return 'text-gray-400';
+            }
+        }
+    }
+    </script>
+</body>
+</html>

@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/wakaba/wakaba/internal/adapters/http"
+	wakabaMCP "github.com/wakaba/wakaba/internal/adapters/mcp"
 	sqliteAdapter "github.com/wakaba/wakaba/internal/adapters/sqlite"
 	"github.com/wakaba/wakaba/internal/adapters/webhook"
 	"github.com/wakaba/wakaba/internal/application"
@@ -18,8 +19,14 @@ func main() {
 	}))
 
 	dbPath := "var/wakaba.db"
-	if len(os.Args) > 1 {
-		dbPath = os.Args[1]
+	mcpMode := false
+
+	for _, arg := range os.Args[1:] {
+		if arg == "--mcp" {
+			mcpMode = true
+		} else if arg[0] != '-' {
+			dbPath = arg
+		}
 	}
 
 	db, err := sqliteAdapter.Open(dbPath)
@@ -88,6 +95,21 @@ func main() {
 	deliveryWorker := webhook.NewDeliveryWorker(db, logger)
 	deliveryWorker.Start(context.Background())
 	statusSim.Start(context.Background())
+
+	if mcpMode {
+		mcpServer := wakabaMCP.NewMCPServer(
+			obsSvc,
+			messageRepo,
+			conversationRepo,
+			identityRepo,
+			obsRepo,
+		)
+		if err := mcpServer.Serve_stdio(); err != nil {
+			logger.Error("mcp server error", "error", err)
+			os.Exit(1)
+		}
+		return
+	}
 
 	server := http.NewServer(messagingSvc, phoneReg, identityRepo, conversationRepo, messageRepo, logger)
 	server.SetAdminService(adminSvc)

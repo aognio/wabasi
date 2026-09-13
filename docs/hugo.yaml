@@ -1,0 +1,14 @@
+baseURL: /
+title: Wakaba Documentation
+theme: hugo-book
+
+markup:
+  goldmark:
+    renderer:
+      unsafe: true
+
+menu:
+  after:
+    - name: GitHub
+      url: https://github.com/wakaba/wakaba
+      weight: 10

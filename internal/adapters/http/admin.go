@@ -3,6 +3,7 @@ package http
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -28,6 +29,9 @@ func (h *AdminHandler) SetObservabilityService(obs *application.ObservabilitySer
 
 func (h *AdminHandler) Register(app *fiber.App) {
 	app.Get("/admin", h.handleDashboard)
+	app.Get("/admin/api-keys", h.handleAPIKeysList)
+	app.Post("/admin/api-keys", h.handleCreateAPIKey)
+	app.Post("/admin/api-keys/:id/revoke", h.handleRevokeAPIKey)
 	app.Get("/admin/businesses", h.handleBusinessesList)
 	app.Post("/admin/businesses", h.handleCreateBusiness)
 	app.Get("/admin/wabas", h.handleWABAsList)
@@ -84,6 +88,7 @@ func (h *AdminHandler) handleDashboard(c *fiber.Ctx) error {
   </a>
 </div>
 <nav class="space-y-2">
+  <a href="/admin/api-keys" class="block bg-white rounded-lg shadow p-4 hover:shadow-md border-l-4 border-purple-500">API Keys</a>
   <a href="/admin/businesses" class="block bg-white rounded-lg shadow p-4 hover:shadow-md">Businesses &amp; WABAs</a>
   <a href="/admin/phones" class="block bg-white rounded-lg shadow p-4 hover:shadow-md">Phone Numbers</a>
   <a href="/admin/applications" class="block bg-white rounded-lg shadow p-4 hover:shadow-md">Applications &amp; Credentials</a>
@@ -95,6 +100,157 @@ func (h *AdminHandler) handleDashboard(c *fiber.Ctx) error {
 </nav>
 </div></body></html>`,
 		len(businesses), len(wabas), len(phones), len(apps)))
+}
+
+func (h *AdminHandler) handleAPIKeysList(c *fiber.Ctx) error {
+	keys, _ := h.admin.ListAPIKeys(c.Context())
+
+	rows := ""
+	for _, k := range keys {
+		scopes := ""
+		for i, s := range k.Scopes {
+			if i > 0 {
+				scopes += " "
+			}
+			scopes += string(s)
+		}
+		created := k.CreatedAt.Format("2006-01-02 15:04")
+		revoked := ""
+		if k.RevokedAt != nil {
+			revoked = k.RevokedAt.Format("2006-01-02 15:04")
+		}
+		statusClass := "text-green-600"
+		if k.Status != "active" {
+			statusClass = "text-red-600"
+		}
+		rows += fmt.Sprintf(`<tr class="border-t">
+  <td class="px-4 py-3 font-mono text-xs">%s</td>
+  <td class="px-4 py-3 font-medium">%s</td>
+  <td class="px-4 py-3 font-mono text-xs">%s</td>
+  <td class="px-4 py-3 text-xs">%s</td>
+  <td class="px-4 py-3 text-sm %s">%s</td>
+  <td class="px-4 py-3 text-xs text-gray-500">%s</td>
+  <td class="px-4 py-3 text-xs text-gray-500">%s</td>`, k.ID, k.Name, k.KeyPrefix, scopes,
+			statusClass, k.Status, created, revoked)
+
+		if k.Status == "active" {
+			rows += fmt.Sprintf(`<td class="px-4 py-3">
+  <form method="POST" action="/admin/api-keys/%s/revoke" class="inline"
+    onsubmit="return confirm('Revoke this API key?')">
+    <button class="text-red-600 hover:text-red-800 text-xs">Revoke</button>
+  </form></td>`, k.ID)
+		} else {
+			rows += `<td class="px-4 py-3 text-xs text-gray-400">-</td>`
+		}
+		rows += `</tr>`
+	}
+
+	scopeOptions := ""
+	for _, s := range domain.AllScopes {
+		scopeOptions += fmt.Sprintf(`<label class="inline-flex items-center gap-1 text-xs"><input type="checkbox" name="scopes" value="%s" class="rounded"> %s</label> `, s, s)
+	}
+
+	return c.Type("html").SendString(fmt.Sprintf(`<!DOCTYPE html>
+<html><head><title>API Keys - Wakaba Admin</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head><body class="bg-gray-50 min-h-screen">
+<div class="max-w-6xl mx-auto px-6 py-8">
+<div class="flex items-center gap-4 mb-6">
+  <a href="/admin" class="text-gray-500 hover:text-gray-700">&larr; Back</a>
+  <h1 class="text-2xl font-bold text-gray-800">API Keys</h1>
+</div>
+<div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 text-sm text-yellow-800">
+  <strong>Important:</strong> The secret key is shown only once when created. Copy it immediately.
+  API keys grant programmatic access to admin operations via <code class="bg-yellow-100 px-1 rounded">/api/admin/*</code> endpoints.
+</div>
+<div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+<form method="POST" action="/admin/api-keys" class="p-4 flex flex-col gap-3 border-b">
+  <div class="flex gap-3 items-end flex-wrap">
+    <div><label class="block text-xs text-gray-500 mb-1">Name</label><input name="name" required class="border rounded px-3 py-2 text-sm" placeholder="e.g. CI Agent, Monitoring"></div>
+    <div class="flex gap-3 items-center">
+      <label class="block text-xs text-gray-500">Scopes:</label>
+      %s
+    </div>
+    <button class="bg-purple-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-purple-700">Create API Key</button>
+  </div>
+</form>
+<table class="w-full text-sm"><thead class="bg-gray-100"><tr>
+  <th class="px-4 py-2 text-left text-xs text-gray-500">ID</th>
+  <th class="px-4 py-2 text-left text-xs text-gray-500">Name</th>
+  <th class="px-4 py-2 text-left text-xs text-gray-500">Key Prefix</th>
+  <th class="px-4 py-2 text-left text-xs text-gray-500">Scopes</th>
+  <th class="px-4 py-2 text-left text-xs text-gray-500">Status</th>
+  <th class="px-4 py-2 text-left text-xs text-gray-500">Created</th>
+  <th class="px-4 py-2 text-left text-xs text-gray-500">Revoked</th>
+  <th class="px-4 py-2"></th>
+</tr></thead><tbody>%s</tbody></table>
+</div>
+</div></body></html>`, scopeOptions, rows))
+}
+
+func (h *AdminHandler) handleCreateAPIKey(c *fiber.Ctx) error {
+	name := c.FormValue("name")
+	if name == "" {
+		return c.Redirect("/admin/api-keys")
+	}
+
+	rawScopes := c.FormValue("scopes")
+	var scopes []domain.APIKeyScope
+	if rawScopes != "" {
+		for _, s := range strings.Split(rawScopes, ",") {
+			s = strings.TrimSpace(s)
+			if s != "" {
+				scopes = append(scopes, domain.APIKeyScope(s))
+			}
+		}
+	}
+
+	_, plain, err := h.admin.CreateAPIKey(c.Context(), name, scopes)
+	if err != nil {
+		return c.Redirect("/admin/api-keys")
+	}
+
+	scopesStr := ""
+	for i, s := range scopes {
+		if i > 0 {
+			scopesStr += " "
+		}
+		scopesStr += string(s)
+	}
+
+	return c.Type("html").SendString(fmt.Sprintf(`<!DOCTYPE html>
+<html><head><title>API Key Created - Wakaba Admin</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head><body class="bg-gray-50 min-h-screen">
+<div class="max-w-2xl mx-auto px-6 py-8">
+<div class="flex items-center gap-4 mb-6">
+  <a href="/admin/api-keys" class="text-gray-500 hover:text-gray-700">&larr; Back to API Keys</a>
+  <h1 class="text-2xl font-bold text-gray-800">API Key Created</h1>
+</div>
+<div class="bg-green-50 border-l-4 border-green-400 p-4 mb-6 text-sm text-green-800">
+  <strong>Copy this secret now.</strong> It will not be shown again.
+</div>
+<div class="bg-white rounded-lg shadow p-6">
+  <div class="mb-4"><span class="text-xs text-gray-500">Name:</span><span class="ml-2 font-medium">%s</span></div>
+  <div class="mb-4"><span class="text-xs text-gray-500">Key Secret:</span>
+    <code class="ml-2 bg-gray-100 px-3 py-2 rounded text-sm font-mono break-all block mt-1">%s</code>
+  </div>
+  <div class="mb-4"><span class="text-xs text-gray-500">Scopes:</span><span class="ml-2 text-sm">%s</span></div>
+  <div class="bg-gray-50 rounded p-4 mt-4 text-sm">
+    <p class="font-medium mb-2">Use in API calls:</p>
+    <code class="block text-xs font-mono">Authorization: Bearer %s</code>
+  </div>
+  <div class="mt-4">
+    <a href="/admin/api-keys" class="text-purple-600 hover:text-purple-800 text-sm">Return to API Keys</a>
+  </div>
+</div>
+</div></body></html>`, name, plain, scopesStr, plain))
+}
+
+func (h *AdminHandler) handleRevokeAPIKey(c *fiber.Ctx) error {
+	id := c.Params("id")
+	h.admin.RevokeAPIKey(c.Context(), domain.APIKeyID(id))
+	return c.Redirect("/admin/api-keys")
 }
 
 func (h *AdminHandler) handleBusinessesList(c *fiber.Ctx) error {

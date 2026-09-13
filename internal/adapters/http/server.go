@@ -1040,6 +1040,12 @@ func (s *Server) RegisterAdmin(admin *application.AdminService, messaging *appli
 		adminHandler.SetObservabilityService(s.observability)
 	}
 	adminHandler.Register(s.app)
+
+	apiHandler := NewAdminAPIHandler(admin, messaging)
+	if s.observability != nil {
+		apiHandler.SetObservabilityService(s.observability)
+	}
+	apiHandler.Register(s.app)
 }
 
 func (s *Server) handleUploadMedia(c *fiber.Ctx) error {

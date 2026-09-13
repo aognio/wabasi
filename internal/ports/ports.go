@@ -111,6 +111,14 @@ type EventReader interface {
 	CountByOutcome(ctx context.Context, since *time.Time) (map[domain.EventOutcome]int64, error)
 }
 
+type APIKeyRepository interface {
+	Create(ctx context.Context, key *domain.APIKey) error
+	GetByID(ctx context.Context, id domain.APIKeyID) (*domain.APIKey, error)
+	GetByKeyHash(ctx context.Context, keyHash string) (*domain.APIKey, error)
+	List(ctx context.Context) ([]*domain.APIKey, error)
+	Revoke(ctx context.Context, id domain.APIKeyID) error
+}
+
 type MediaStore interface {
 	Store(ctx context.Context, filename string, data []byte, mimeType string) (string, error)
 	Get(ctx context.Context, id string) ([]byte, string, error)

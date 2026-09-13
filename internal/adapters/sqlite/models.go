@@ -181,3 +181,18 @@ type WebhookConfigRecord struct {
 func (WebhookConfigRecord) TableName() string {
 	return "webhook_configs"
 }
+
+type APIKeyRecord struct {
+	gorm.Model
+	ExternalID string `gorm:"uniqueIndex"`
+	Name       string
+	KeyHash    string `gorm:"index"`
+	KeyPrefix  string `gorm:"size:16"`
+	Scopes     string `gorm:"type:text"`
+	Status     string `gorm:"size:32"`
+	RevokedAt  *time.Time
+}
+
+func (APIKeyRecord) TableName() string {
+	return "api_keys"
+}

@@ -27,6 +27,8 @@ const (
 	EventWebhookConfigured        EventType = "webhook_configured"
 	EventMediaUploaded            EventType = "media_uploaded"
 	EventMediaDownloaded          EventType = "media_downloaded"
+	EventAPIKeyCreated            EventType = "api_key_created"
+	EventAPIKeyRevoked            EventType = "api_key_revoked"
 
 	SourceMessaging    EventSource = "messaging"
 	SourceAdmin        EventSource = "admin"

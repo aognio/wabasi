@@ -16,6 +16,7 @@ type AdminService struct {
 	apps         ports.ApplicationRepository
 	credentials  ports.CredentialRepository
 	webhooks     ports.WebhookConfigRepository
+	apiKeys      ports.APIKeyRepository
 	phoneReg     *PhoneRegistry
 	events       ports.EventPublisher
 	logger       *slog.Logger
@@ -28,6 +29,7 @@ func NewAdminService(
 	apps ports.ApplicationRepository,
 	credentials ports.CredentialRepository,
 	webhooks ports.WebhookConfigRepository,
+	apiKeys ports.APIKeyRepository,
 	phoneReg *PhoneRegistry,
 	events ports.EventPublisher,
 	logger *slog.Logger,
@@ -39,6 +41,7 @@ func NewAdminService(
 		apps:        apps,
 		credentials: credentials,
 		webhooks:    webhooks,
+		apiKeys:     apiKeys,
 		phoneReg:    phoneReg,
 		events:      events,
 		logger:      logger,
@@ -290,4 +293,53 @@ func (s *AdminService) AuthorizeToken(ctx context.Context, token string, phoneNu
 	}
 
 	return nil, fmt.Errorf("phone_number_id not authorized for this application")
+}
+
+// --- API Keys ---
+
+func (s *AdminService) CreateAPIKey(ctx context.Context, name string, scopes []domain.APIKeyScope) (*domain.APIKey, string, error) {
+	ak, plain := domain.NewAPIKey(name, scopes)
+	if err := s.apiKeys.Create(ctx, ak); err != nil {
+		return nil, "", fmt.Errorf("create api key: %w", err)
+	}
+	s.events.Publish(ctx, domain.NewEvent(domain.EventAPIKeyCreated).
+		WithSource(domain.SourceAdmin).
+		WithActorID(string(ak.ID)).
+		WithPayload(map[string]interface{}{
+			"id":     string(ak.ID),
+			"name":   ak.Name,
+			"scopes": ak.Scopes,
+		}).
+		Build())
+	return ak, plain, nil
+}
+
+func (s *AdminService) ListAPIKeys(ctx context.Context) ([]*domain.APIKey, error) {
+	return s.apiKeys.List(ctx)
+}
+
+func (s *AdminService) RevokeAPIKey(ctx context.Context, id domain.APIKeyID) error {
+	if err := s.apiKeys.Revoke(ctx, id); err != nil {
+		return fmt.Errorf("revoke api key: %w", err)
+	}
+	s.events.Publish(context.Background(), domain.NewEvent(domain.EventAPIKeyRevoked).
+		WithSource(domain.SourceAdmin).
+		WithActorID(string(id)).
+		WithPayload(map[string]string{"id": string(id)}).
+		Build())
+	return nil
+}
+
+func (s *AdminService) AuthorizeAPIKey(ctx context.Context, token string) (*domain.AuthorizedAPIKeyResult, error) {
+	tokenHash := domain.HashToken(token)
+
+	key, err := s.apiKeys.GetByKeyHash(ctx, tokenHash)
+	if err != nil || key == nil {
+		return nil, fmt.Errorf("invalid api key")
+	}
+	if key.Status != "active" {
+		return nil, fmt.Errorf("api key revoked")
+	}
+
+	return &domain.AuthorizedAPIKeyResult{APIKey: key}, nil
 }

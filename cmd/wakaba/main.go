@@ -48,6 +48,7 @@ func main() {
 	appRepo := sqliteAdapter.NewApplicationRepository(db)
 	credentialRepo := sqliteAdapter.NewCredentialRepository(db)
 	webhookConfigRepo := sqliteAdapter.NewWebhookConfigRepository(db)
+	apiKeyRepo := sqliteAdapter.NewAPIKeyRepository(db)
 
 	mediaStore := sqliteAdapter.NewMediaStore(db, "var")
 
@@ -72,6 +73,7 @@ func main() {
 		appRepo,
 		credentialRepo,
 		webhookConfigRepo,
+		apiKeyRepo,
 		phoneReg,
 		eventPub,
 		logger,

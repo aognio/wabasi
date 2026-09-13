@@ -65,6 +65,7 @@ func setupTestWithCredential(t *testing.T) (*adapterHTTP.Server, string, func())
 	appRepo := sqliteAdapter.NewApplicationRepository(db)
 	credentialRepo := sqliteAdapter.NewCredentialRepository(db)
 	webhookConfigRepo := sqliteAdapter.NewWebhookConfigRepository(db)
+	apiKeyRepo := sqliteAdapter.NewAPIKeyRepository(db)
 
 	messagingSvc := application.NewMessagingService(
 		messageRepo, conversationRepo, identityRepo, phoneRepo, eventPub, webhookDisp, logger,
@@ -73,7 +74,7 @@ func setupTestWithCredential(t *testing.T) (*adapterHTTP.Server, string, func())
 
 	adminSvc := application.NewAdminService(
 		businessRepo, wabaRepo, businessPhoneRepo, appRepo,
-		credentialRepo, webhookConfigRepo, phoneReg, eventPub, logger,
+		credentialRepo, webhookConfigRepo, apiKeyRepo, phoneReg, eventPub, logger,
 	)
 
 	// Create a business with WABA and phone number

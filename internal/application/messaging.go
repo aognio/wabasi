@@ -6,8 +6,8 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/wakaba/wakaba/internal/domain"
-	"github.com/wakaba/wakaba/internal/ports"
+	"github.com/wabasi/wabasi/internal/domain"
+	"github.com/wabasi/wabasi/internal/ports"
 )
 
 type MessagingService struct {

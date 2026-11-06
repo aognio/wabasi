@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/wakaba/wakaba/internal/domain"
+	"github.com/wabasi/wabasi/internal/domain"
 	"gorm.io/gorm"
 )
 

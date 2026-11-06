@@ -1,10 +1,10 @@
-# Wakaba
+# Wabasi
 
-A locally controllable simulated messaging world for WhatsApp Business Platform development, testing, and investigation.
+**WhatsApp Business API Simulator** — a locally controllable simulated messaging world for WhatsApp Business Platform development, testing, and investigation.
 
-## What is Wakaba?
+## What is Wabasi?
 
-Wakaba is an open-source simulator and compatibility implementation of the WhatsApp Business Platform / Cloud API. It creates an isolated, deterministic messaging world where:
+Wabasi is an open-source simulator and compatibility implementation of the WhatsApp Business Platform / Cloud API. It creates an isolated, deterministic messaging world where:
 
 - **Consumer identities** communicate directly with each other
 - **Business participants** receive messages through a Meta-compatible API
@@ -12,20 +12,20 @@ Wakaba is an open-source simulator and compatibility implementation of the Whats
 - **Media** flows through content-addressable storage
 - **Everything** is observable, traceable, and diagnosable
 
-A WhatsApp-aware application switches from Meta's real API to Wakaba by changing only the API base URL and credentials.
+A WhatsApp-aware application switches from Meta's real API to Wabasi by changing only the API base URL and credentials.
 
 ## Quick Start
 
 ```bash
 # Build and run
 make build
-./var/wakaba
+./bin/wabasi
 
 # Or with make
 make run
 ```
 
-Wakaba starts at `http://localhost:8080`.
+Wabasi starts at `http://localhost:8080`.
 
 ### Path A: Consumer Messaging
 
@@ -52,7 +52,7 @@ No business setup required.
 ## Architecture
 
 ```
-                    Wakaba World
+                    Wabasi World
 
      Alice <──────────────> Bob
        │
@@ -97,22 +97,22 @@ internal/
         mcp/         # MCP server for agentic investigation
         webhook/     # Webhook delivery worker
 cmd/
-    wakaba/          # Main executable
+    wabasi/          # Main executable
 ```
 
 ## MCP (Model Context Protocol)
 
-Wakaba exposes its world through MCP for agentic debugging, tracing, and analysis:
+Wabasi exposes its world through MCP for agentic debugging, tracing, and analysis:
 
 ```bash
 # Start in MCP mode (stdio transport)
-./var/wakaba --mcp
+./bin/wabasi --mcp
 ```
 
 ### Resources
-- `wakaba://world/summary` — world snapshot
-- `wakaba://health` — server health
-- `wakaba://metrics/current` — 24h metrics
+- `wabasi://world/summary` — world snapshot
+- `wabasi://health` — server health
+- `wabasi://metrics/current` — 24h metrics
 
 ### Tools (read-only)
 - `trace_message` — reconstruct message lifecycle
@@ -135,7 +135,7 @@ Wakaba exposes its world through MCP for agentic debugging, tracing, and analysi
 
 ## Observability
 
-Wakaba records structured operational evidence for every interaction:
+Wabasi records structured operational evidence for every interaction:
 
 - **Events** — discrete facts (message created, webhook delivered)
 - **Traces** — causal relationships across components
@@ -156,7 +156,7 @@ Admin reports at `/admin/reports`:
 | `/webhook` | POST | Receive inbound messages/statuses |
 | `/webhook` | GET | Webhook verification |
 
-### Wakaba Control Interface
+### Wabasi Control Interface
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
@@ -173,7 +173,7 @@ Admin reports at `/admin/reports`:
 |----------|---------|-------------|
 | `PORT` | `8080` | HTTP server port |
 | `--mcp` | false | Start in MCP stdio mode |
-| (arg 1) | `var/wakaba.db` | SQLite database path |
+| (arg 1) | `var/wabasi.db` | SQLite database path |
 
 ## Development
 
@@ -189,4 +189,6 @@ make help      # Show all targets
 
 ## License
 
-Open source. See LICENSE for details.
+MIT License - Copyright (c) 2026 Antonio Ognio
+
+Made with ❤️ from 🇵🇪. El Perú es clave 🔑.

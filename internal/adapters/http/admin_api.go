@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/wakaba/wakaba/internal/application"
-	"github.com/wakaba/wakaba/internal/domain"
-	"github.com/wakaba/wakaba/internal/ports"
+	"github.com/wabasi/wabasi/internal/application"
+	"github.com/wabasi/wabasi/internal/domain"
+	"github.com/wabasi/wabasi/internal/ports"
 )
 
 type AdminAPIHandler struct {

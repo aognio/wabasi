@@ -3,11 +3,11 @@ title: Introduction
 weight: 1
 ---
 
-# Wakaba
+# Wabasi
 
-Wakaba is a locally controllable simulated messaging world designed for WhatsApp Business Platform development, testing, and investigation.
+**WhatsApp Business API Simulator** — a locally controllable simulated messaging world designed for WhatsApp Business Platform development, testing, and investigation.
 
-## What Wakaba Provides
+## What Wabasi Provides
 
 - **Simulated messaging world** with arbitrary consumer identities
 - **Consumer-to-consumer communication** (Alice ↔ Bob)
@@ -17,9 +17,9 @@ Wakaba is a locally controllable simulated messaging world designed for WhatsApp
 - **Deep observability** with causal reconstruction
 - **Agentic debugging** through MCP
 
-## Why Wakaba?
+## Why Wabasi?
 
-Unlike Meta's official test facilities, Wakaba gives you **complete control and visibility** over the simulated world:
+Unlike Meta's official test facilities, Wabasi gives you **complete control and visibility** over the simulated world:
 
 - Inspect every message, delivery transition, and webhook
 - Trace causal paths across components
@@ -29,7 +29,7 @@ Unlike Meta's official test facilities, Wakaba gives you **complete control and 
 
 ## Glass Box
 
-Wakaba is a glass-box messaging laboratory. You can inspect:
+Wabasi is a glass-box messaging laboratory. You can inspect:
 
 - Participants and their relationships
 - Messages and delivery state transitions
@@ -38,7 +38,7 @@ Wakaba is a glass-box messaging laboratory. You can inspect:
 - Media storage and deduplication
 - Causal relationships across all components
 
-This makes Wakaba valuable for:
+This makes Wabasi valuable for:
 
 - Automated testing and CI
 - Agentic coding and debugging

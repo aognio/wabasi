@@ -6,11 +6,11 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/wakaba/wakaba/internal/adapters/http"
-	wakabaMCP "github.com/wakaba/wakaba/internal/adapters/mcp"
-	sqliteAdapter "github.com/wakaba/wakaba/internal/adapters/sqlite"
-	"github.com/wakaba/wakaba/internal/adapters/webhook"
-	"github.com/wakaba/wakaba/internal/application"
+	"github.com/wabasi/wabasi/internal/adapters/http"
+	wabasiMCP "github.com/wabasi/wabasi/internal/adapters/mcp"
+	sqliteAdapter "github.com/wabasi/wabasi/internal/adapters/sqlite"
+	"github.com/wabasi/wabasi/internal/adapters/webhook"
+	"github.com/wabasi/wabasi/internal/application"
 )
 
 func main() {
@@ -18,7 +18,7 @@ func main() {
 		Level: slog.LevelInfo,
 	}))
 
-	dbPath := "var/wakaba.db"
+	dbPath := "var/wabasi.db"
 	mcpMode := false
 
 	for _, arg := range os.Args[1:] {
@@ -99,7 +99,7 @@ func main() {
 	statusSim.Start(context.Background())
 
 	if mcpMode {
-		mcpServer := wakabaMCP.NewMCPServer(
+		mcpServer := wabasiMCP.NewMCPServer(
 			obsSvc,
 			messageRepo,
 			conversationRepo,
@@ -124,8 +124,8 @@ func main() {
 		addr = ":" + port
 	}
 
-	logger.Info("starting wakaba", "addr", addr)
-	fmt.Println("Wakaba is running at http://localhost" + addr)
+	logger.Info("starting wabasi", "addr", addr)
+	fmt.Println("Wabasi is running at http://localhost" + addr)
 
 	if err := server.Listen(addr); err != nil {
 		logger.Error("server error", "error", err)

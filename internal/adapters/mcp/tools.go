@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
-	"github.com/wakaba/wakaba/internal/domain"
-	"github.com/wakaba/wakaba/internal/ports"
+	"github.com/wabasi/wabasi/internal/domain"
+	"github.com/wabasi/wabasi/internal/ports"
 )
 
 func (s *MCPServer) registerTools() {
@@ -161,7 +161,7 @@ func (s *MCPServer) registerTools() {
 
 	s.mcpServer.AddTool(mcp.Tool{
 		Name:        "audit_world_integrity",
-		Description: "Run integrity checks across the Wakaba world: participants, conversations, messages, delivery states. Returns structured findings. READ ONLY.",
+		Description: "Run integrity checks across the Wabasi world: participants, conversations, messages, delivery states. Returns structured findings. READ ONLY.",
 		InputSchema: mcp.ToolInputSchema{
 			Type:       "object",
 			Properties: map[string]any{},

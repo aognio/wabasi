@@ -33,7 +33,7 @@ func (s *MCPServer) registerPrompts() {
 
 	s.mcpServer.AddPrompt(mcp.Prompt{
 		Name:        "audit_world",
-		Description: "Guide a comprehensive audit of the Wakaba world",
+		Description: "Guide a comprehensive audit of the Wabasi world",
 		Arguments:  []mcp.PromptArgument{},
 	}, s.handleAuditWorldPrompt)
 
@@ -167,12 +167,12 @@ Follow this comparison methodology:
 }
 
 func (s *MCPServer) handleAuditWorldPrompt(ctx context.Context, request mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
-	guide := `## Audit Wakaba World
+	guide := `## Audit Wabasi World
 
 Perform a comprehensive integrity audit:
 
 1. **World summary**
-   - Read wakaba://world/summary resource
+   - Read wabasi://world/summary resource
    - Note: consumers, events, failures
 
 2. **Run integrity checks**
@@ -184,7 +184,7 @@ Perform a comprehensive integrity audit:
    - Identify any patterns
 
 4. **Review event distribution**
-   - Read wakaba://metrics/current resource
+   - Read wabasi://metrics/current resource
    - Check for unusual event type ratios
 
 5. **Assess overall health**

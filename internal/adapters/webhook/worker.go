@@ -129,7 +129,7 @@ func (w *DeliveryWorker) deliver(ctx context.Context, d *WebhookDelivery) {
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Hub-Signature-256", "sha256="+signature)
-	req.Header.Set("User-Agent", "Wakaba-Webhook/1.0")
+	req.Header.Set("User-Agent", "Wabasi-Webhook/1.0")
 
 	resp, err := w.client.Do(req)
 	if err != nil {

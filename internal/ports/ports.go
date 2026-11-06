@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/wakaba/wakaba/internal/domain"
+	"github.com/wabasi/wabasi/internal/domain"
 )
 
 type MessageRepository interface {

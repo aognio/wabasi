@@ -5,7 +5,7 @@ weight: 5
 
 # MCP for Agentic Investigation
 
-Wakaba exposes its world through MCP for agentic debugging, tracing, analytics, and deep investigation.
+Wabasi exposes its world through MCP for agentic debugging, tracing, analytics, and deep investigation.
 
 > **MCP is primarily a privileged observability, tracing, analytics and diagnostics interface for developers and agentic coding/investigation tools.**
 
@@ -23,8 +23,8 @@ CRM applications use the Meta-compatible API. Human users use the Virtual Client
 ## Starting MCP Mode
 
 ```bash
-# Start Wakaba in MCP stdio mode
-./var/wakaba --mcp
+# Start Wabasi in MCP stdio mode
+./bin/wabasi --mcp
 ```
 
 MCP communicates over stdin/stdout using the JSON-RPC protocol.
@@ -45,13 +45,13 @@ MCP and web reports consume the same analytical services. There is one definitio
 
 ## Resources
 
-Stable, readable representations of Wakaba state:
+Stable, readable representations of Wabasi state:
 
 | URI | Description |
 |-----|-------------|
-| `wakaba://world/summary` | Consumer count, event totals, failure rate |
-| `wakaba://health` | Server health status |
-| `wakaba://metrics/current` | 24h event distribution and outcomes |
+| `wabasi://world/summary` | Consumer count, event totals, failure rate |
+| `wabasi://health` | Server health status |
+| `wabasi://metrics/current` | 24h event distribution and outcomes |
 
 ## Tools
 

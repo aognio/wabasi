@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/wakaba/wakaba/internal/application"
-	"github.com/wakaba/wakaba/internal/domain"
-	"github.com/wakaba/wakaba/internal/ports"
+	"github.com/wabasi/wabasi/internal/application"
+	"github.com/wabasi/wabasi/internal/domain"
+	"github.com/wabasi/wabasi/internal/ports"
 )
 
 type AdminHandler struct {
@@ -63,12 +63,12 @@ func (h *AdminHandler) handleDashboard(c *fiber.Ctx) error {
 	apps, _ := h.admin.ListApplications(c.Context())
 
 	return c.Type("html").SendString(fmt.Sprintf(`<!DOCTYPE html>
-<html><head><title>Wakaba Admin</title>
+<html><head><title>Wabasi Admin</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-50 min-h-screen">
 <div class="max-w-6xl mx-auto px-6 py-8">
-<h1 class="text-2xl font-bold text-gray-800 mb-6">Wakaba Admin</h1>
+<h1 class="text-2xl font-bold text-gray-800 mb-6">Wabasi Admin</h1>
 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
   <a href="/admin/businesses" class="bg-white rounded-lg shadow p-4 hover:shadow-md transition">
     <div class="text-2xl font-bold text-[#008069]">%d</div>
@@ -151,7 +151,7 @@ func (h *AdminHandler) handleAPIKeysList(c *fiber.Ctx) error {
 	}
 
 	return c.Type("html").SendString(fmt.Sprintf(`<!DOCTYPE html>
-<html><head><title>API Keys - Wakaba Admin</title>
+<html><head><title>API Keys - Wabasi Admin</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head><body class="bg-gray-50 min-h-screen">
 <div class="max-w-6xl mx-auto px-6 py-8">
@@ -219,7 +219,7 @@ func (h *AdminHandler) handleCreateAPIKey(c *fiber.Ctx) error {
 	}
 
 	return c.Type("html").SendString(fmt.Sprintf(`<!DOCTYPE html>
-<html><head><title>API Key Created - Wakaba Admin</title>
+<html><head><title>API Key Created - Wabasi Admin</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head><body class="bg-gray-50 min-h-screen">
 <div class="max-w-2xl mx-auto px-6 py-8">
@@ -271,7 +271,7 @@ func (h *AdminHandler) handleBusinessesList(c *fiber.Ctx) error {
 	}
 
 	return c.Type("html").SendString(fmt.Sprintf(`<!DOCTYPE html>
-<html><head><title>Businesses - Wakaba Admin</title>
+<html><head><title>Businesses - Wabasi Admin</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head><body class="bg-gray-50 min-h-screen">
 <div class="max-w-6xl mx-auto px-6 py-8">
@@ -330,7 +330,7 @@ func (h *AdminHandler) handleWABAsList(c *fiber.Ctx) error {
 	}
 
 	return c.Type("html").SendString(fmt.Sprintf(`<!DOCTYPE html>
-<html><head><title>WABAs - Wakaba Admin</title>
+<html><head><title>WABAs - Wabasi Admin</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head><body class="bg-gray-50 min-h-screen">
 <div class="max-w-6xl mx-auto px-6 py-8">
@@ -397,7 +397,7 @@ func (h *AdminHandler) handlePhonesList(c *fiber.Ctx) error {
 	}
 
 	return c.Type("html").SendString(fmt.Sprintf(`<!DOCTYPE html>
-<html><head><title>Phone Numbers - Wakaba Admin</title>
+<html><head><title>Phone Numbers - Wabasi Admin</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head><body class="bg-gray-50 min-h-screen">
 <div class="max-w-6xl mx-auto px-6 py-8">
@@ -459,7 +459,7 @@ func (h *AdminHandler) handleApplicationsList(c *fiber.Ctx) error {
 	}
 
 	return c.Type("html").SendString(fmt.Sprintf(`<!DOCTYPE html>
-<html><head><title>Applications - Wakaba Admin</title>
+<html><head><title>Applications - Wabasi Admin</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head><body class="bg-gray-50 min-h-screen">
 <div class="max-w-6xl mx-auto px-6 py-8">
@@ -541,7 +541,7 @@ func (h *AdminHandler) handleCredentialsList(c *fiber.Ctx) error {
 	}
 
 	return c.Type("html").SendString(fmt.Sprintf(`<!DOCTYPE html>
-<html><head><title>Credentials - Wakaba Admin</title>
+<html><head><title>Credentials - Wabasi Admin</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head><body class="bg-gray-50 min-h-screen">
 <div class="max-w-6xl mx-auto px-6 py-8">
@@ -580,7 +580,7 @@ func (h *AdminHandler) handleIssueCredential(c *fiber.Ctx) error {
 		return c.Status(http.StatusBadRequest).SendString(err.Error())
 	}
 	return c.Type("html").SendString(fmt.Sprintf(`<!DOCTYPE html>
-<html><head><title>Token Issued - Wakaba Admin</title>
+<html><head><title>Token Issued - Wabasi Admin</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head><body class="bg-gray-50 min-h-screen flex items-center justify-center">
 <div class="bg-white rounded-lg shadow-lg p-8 max-w-lg w-full">
@@ -643,7 +643,7 @@ func (h *AdminHandler) handleWebhooksList(c *fiber.Ctx) error {
 	}
 
 	return c.Type("html").SendString(fmt.Sprintf(`<!DOCTYPE html>
-<html><head><title>Webhooks - Wakaba Admin</title>
+<html><head><title>Webhooks - Wabasi Admin</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head><body class="bg-gray-50 min-h-screen">
 <div class="max-w-6xl mx-auto px-6 py-8">
@@ -685,7 +685,7 @@ func (h *AdminHandler) handleConfigureWebhook(c *fiber.Ctx) error {
 func (h *AdminHandler) handleIdentitiesList(c *fiber.Ctx) error {
 	_ = h.messaging
 	return c.Type("html").SendString(`<!DOCTYPE html>
-<html><head><title>Identities - Wakaba Admin</title>
+<html><head><title>Identities - Wabasi Admin</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head><body class="bg-gray-50 min-h-screen">
 <div class="max-w-6xl mx-auto px-6 py-8">
@@ -699,7 +699,7 @@ func (h *AdminHandler) handleIdentitiesList(c *fiber.Ctx) error {
 
 func (h *AdminHandler) handleConversationsList(c *fiber.Ctx) error {
 	return c.Type("html").SendString(`<!DOCTYPE html>
-<html><head><title>Conversations - Wakaba Admin</title>
+<html><head><title>Conversations - Wabasi Admin</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head><body class="bg-gray-50 min-h-screen">
 <div class="max-w-6xl mx-auto px-6 py-8">
@@ -713,7 +713,7 @@ func (h *AdminHandler) handleConversationsList(c *fiber.Ctx) error {
 
 func (h *AdminHandler) handleMessagesList(c *fiber.Ctx) error {
 	return c.Type("html").SendString(`<!DOCTYPE html>
-<html><head><title>Messages - Wakaba Admin</title>
+<html><head><title>Messages - Wabasi Admin</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head><body class="bg-gray-50 min-h-screen">
 <div class="max-w-6xl mx-auto px-6 py-8">
@@ -727,7 +727,7 @@ func (h *AdminHandler) handleMessagesList(c *fiber.Ctx) error {
 
 func (h *AdminHandler) handleReportsIndex(c *fiber.Ctx) error {
 	return c.Type("html").SendString(`<!DOCTYPE html>
-<html><head><title>Reports - Wakaba Admin</title>
+<html><head><title>Reports - Wabasi Admin</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head><body class="bg-gray-50 min-h-screen">
 <div class="max-w-6xl mx-auto px-6 py-8">
@@ -755,7 +755,7 @@ func (h *AdminHandler) handleReportsIndex(c *fiber.Ctx) error {
 func (h *AdminHandler) handleSystemOverview(c *fiber.Ctx) error {
 	if h.observability == nil {
 		return c.Type("html").SendString(`<!DOCTYPE html>
-<html><head><title>System Overview - Wakaba Admin</title>
+<html><head><title>System Overview - Wabasi Admin</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head><body class="bg-gray-50 min-h-screen">
 <div class="max-w-6xl mx-auto px-6 py-8">
@@ -771,7 +771,7 @@ func (h *AdminHandler) handleSystemOverview(c *fiber.Ctx) error {
 
 	return c.Type("html").SendString(func() string {
 		base := fmt.Sprintf(`<!DOCTYPE html>
-<html><head><title>System Overview - Wakaba Admin</title>
+<html><head><title>System Overview - Wabasi Admin</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head><body class="bg-gray-50 min-h-screen">
 <div class="max-w-6xl mx-auto px-6 py-8">
@@ -838,7 +838,7 @@ func (h *AdminHandler) handleSystemOverview(c *fiber.Ctx) error {
 func (h *AdminHandler) handleEventLog(c *fiber.Ctx) error {
 	if h.observability == nil {
 		return c.Type("html").SendString(`<!DOCTYPE html>
-<html><head><title>Event Log - Wakaba Admin</title>
+<html><head><title>Event Log - Wabasi Admin</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head><body class="bg-gray-50 min-h-screen">
 <div class="max-w-6xl mx-auto px-6 py-8">
@@ -854,7 +854,7 @@ func (h *AdminHandler) handleEventLog(c *fiber.Ctx) error {
 
 	return c.Type("html").SendString(func() string {
 		base := fmt.Sprintf(`<!DOCTYPE html>
-<html><head><title>Event Log - Wakaba Admin</title>
+<html><head><title>Event Log - Wabasi Admin</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head><body class="bg-gray-50 min-h-screen">
 <div class="max-w-6xl mx-auto px-6 py-8">
@@ -912,7 +912,7 @@ func (h *AdminHandler) handleEventLog(c *fiber.Ctx) error {
 func (h *AdminHandler) handleMetrics(c *fiber.Ctx) error {
 	if h.observability == nil {
 		return c.Type("html").SendString(`<!DOCTYPE html>
-<html><head><title>Metrics - Wakaba Admin</title>
+<html><head><title>Metrics - Wabasi Admin</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head><body class="bg-gray-50 min-h-screen">
 <div class="max-w-6xl mx-auto px-6 py-8">
@@ -928,7 +928,7 @@ func (h *AdminHandler) handleMetrics(c *fiber.Ctx) error {
 
 	return c.Type("html").SendString(func() string {
 		base := fmt.Sprintf(`<!DOCTYPE html>
-<html><head><title>Metrics - Wakaba Admin</title>
+<html><head><title>Metrics - Wabasi Admin</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head><body class="bg-gray-50 min-h-screen">
 <div class="max-w-6xl mx-auto px-6 py-8">

@@ -12,9 +12,9 @@ import (
 func (s *MCPServer) registerResources() {
 	s.mcpServer.AddResource(
 		mcp.Resource{
-			URI:         "wakaba://world/summary",
+			URI:         "wabasi://world/summary",
 			Name:        "world_summary",
-			Description: "Current Wakaba world snapshot: consumers, events, failures",
+			Description: "Current Wabasi world snapshot: consumers, events, failures",
 			MIMEType:    "application/json",
 		},
 		func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
@@ -35,9 +35,9 @@ func (s *MCPServer) registerResources() {
 
 	s.mcpServer.AddResource(
 		mcp.Resource{
-			URI:         "wakaba://health",
+			URI:         "wabasi://health",
 			Name:        "health",
-			Description: "Wakaba server health status",
+			Description: "Wabasi server health status",
 			MIMEType:    "application/json",
 		},
 		func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
@@ -59,7 +59,7 @@ func (s *MCPServer) registerResources() {
 
 	s.mcpServer.AddResource(
 		mcp.Resource{
-			URI:         "wakaba://metrics/current",
+			URI:         "wabasi://metrics/current",
 			Name:        "current_metrics",
 			Description: "Current metrics summary (last 24h): event distribution, failure rate",
 			MIMEType:    "application/json",

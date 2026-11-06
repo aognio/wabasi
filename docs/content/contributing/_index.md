@@ -8,8 +8,8 @@ weight: 7
 ## Development Setup
 
 ```bash
-git clone https://github.com/wakaba/wakaba.git
-cd wakaba
+git clone https://github.com/wabasi/wabasi.git
+cd wabasi
 make build
 make test
 ```
@@ -28,7 +28,7 @@ make test
 2. Define port interfaces in `internal/ports/`
 3. Implement adapters in `internal/adapters/`
 4. Create application service in `internal/application/`
-5. Wire into `cmd/wakaba/main.go`
+5. Wire into `cmd/wabasi/main.go`
 6. Add tests
 
 ## Code Style

@@ -7,7 +7,7 @@ weight: 6
 
 ## Overview
 
-Wakaba follows clean/hexagonal architecture with ports and adapters:
+Wabasi follows clean/hexagonal architecture with ports and adapters:
 
 ```
 internal/
@@ -20,7 +20,7 @@ internal/
         mcp/         # MCP server
         webhook/     # Delivery worker
 cmd/
-    wakaba/          # Main executable
+    wabasi/          # Main executable
 ```
 
 **Dependencies point inward.** HTTP, SQLite, MCP, and the webhook worker are adapters around the Application and Domain layers. The domain knows nothing about Fiber, GORM, SQLite, HTML, or MCP.
@@ -77,7 +77,7 @@ Services that orchestrate domain logic:
 Two API surfaces:
 
 1. **Meta-compatible interface** — `/v18.0/{phone_number_id}/messages`
-2. **Wakaba control interface** — `/admin/`, `/api/identities`, `/device/`, `/media/`
+2. **Wabasi control interface** — `/admin/`, `/api/identities`, `/device/`, `/media/`
 
 Bearer token auth middleware validates tokens against the credential chain.
 

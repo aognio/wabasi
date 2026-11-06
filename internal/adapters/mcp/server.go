@@ -7,8 +7,8 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
-	"github.com/wakaba/wakaba/internal/application"
-	"github.com/wakaba/wakaba/internal/ports"
+	"github.com/wabasi/wabasi/internal/application"
+	"github.com/wabasi/wabasi/internal/ports"
 )
 
 type MCPServer struct {
@@ -36,7 +36,7 @@ func NewMCPServer(
 	}
 
 	mcpSrv := server.NewMCPServer(
-		"wakaba",
+		"wabasi",
 		"1.0.0",
 		server.WithToolCapabilities(true),
 		server.WithResourceCapabilities(true, false),

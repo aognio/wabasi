@@ -1,5 +1,5 @@
-# Makefile for Wakaba — WhatsApp Business Platform Simulator
-# https://github.com/wakaba/wakaba
+# Makefile for Wabasi — WhatsApp Business API Simulator
+# https://github.com/wabasi/wabasi
 
 # --- Preamble ----------------------------------------------------------------
 SHELL := bash
@@ -19,8 +19,8 @@ else
 endif
 
 # --- Project -----------------------------------------------------------------
-BINARY  := wakaba
-MODULE  := github.com/wakaba/wakaba
+BINARY  := wabasi
+MODULE  := github.com/wabasi/wabasi
 CMD     := ./cmd/$(BINARY)
 
 OUTDIR  := bin
@@ -45,7 +45,7 @@ LDFLAGS := -X main.Version=$(VERSION) \
 
 SOURCES := $(shell find . -name '*.go' -not -path './vendor/*' 2>/dev/null)
 
-DBPATH ?= var/wakaba.db
+DBPATH ?= var/wabasi.db
 ARGS ?=
 
 ##@ Build

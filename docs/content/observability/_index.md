@@ -5,7 +5,7 @@ weight: 4
 
 # Observability and Diagnostics
 
-Wakaba deliberately records enough structured operational evidence to reconstruct simulated interactions. This is not a side effect of logging — it is a first-class architectural subsystem.
+Wabasi deliberately records enough structured operational evidence to reconstruct simulated interactions. This is not a side effect of logging — it is a first-class architectural subsystem.
 
 ## Three Complementary Concepts
 
@@ -24,7 +24,7 @@ Events answer: **What happened?**
 
 ### Traces
 
-Traces reconstruct causal paths across Wakaba components:
+Traces reconstruct causal paths across Wabasi components:
 
 ```
 Alice sends message
@@ -121,7 +121,7 @@ Access reports at `/admin/reports`:
 12:00:02.630 Alice read reply
 ```
 
-From these facts, Wakaba derives:
+From these facts, Wabasi derives:
 
 - Webhook transport latency
 - CRM processing/response latency

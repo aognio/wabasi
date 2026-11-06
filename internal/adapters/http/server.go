@@ -10,9 +10,9 @@ import (
 	"sync"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/wakaba/wakaba/internal/application"
-	"github.com/wakaba/wakaba/internal/domain"
-	"github.com/wakaba/wakaba/internal/ports"
+	"github.com/wabasi/wabasi/internal/application"
+	"github.com/wabasi/wabasi/internal/domain"
+	"github.com/wabasi/wabasi/internal/ports"
 )
 
 type Server struct {
@@ -467,7 +467,7 @@ func (s *Server) handleWebhookVerify(c *fiber.Ctx) error {
 	token := c.Query("hub.verify_token")
 	challenge := c.Query("hub.challenge")
 
-	if mode != "subscribe" || token != "wakaba-verify-token" {
+	if mode != "subscribe" || token != "wabasi-verify-token" {
 		return c.Status(http.StatusForbidden).SendString("Forbidden")
 	}
 
@@ -708,7 +708,7 @@ func (s *Server) handleDevicePage(c *fiber.Ctx) error {
 	}
 
 	return c.Type("html").SendString(fmt.Sprintf(`<!DOCTYPE html>
-<html><head><title>Wakaba - %s</title>
+<html><head><title>Wabasi - %s</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 <style>[x-cloak]{display:none!important}</style>
@@ -718,7 +718,7 @@ func (s *Server) handleDevicePage(c *fiber.Ctx) error {
   <div class="w-10 h-10 rounded-full bg-[#d9fdd3] flex items-center justify-center text-[#008069] font-bold" x-text="identity?.display_name?.charAt(0)||'?'"></div>
   <div><div class="font-semibold" x-text="identity?.display_name"></div>
   <div class="text-xs text-green-100" x-text="identity?.phone"></div></div>
-  <div class="ml-auto text-xs text-green-100">Wakaba Virtual Network</div>
+  <div class="ml-auto text-xs text-green-100">Wabasi Virtual Network</div>
 </div>
 <div class="flex-1 flex overflow-hidden">
   <div class="w-80 bg-white border-r border-gray-200 flex flex-col">

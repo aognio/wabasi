@@ -1,4 +1,4 @@
-module github.com/wakaba/wakaba
+module github.com/wabasi/wabasi
 
 go 1.27.1
 

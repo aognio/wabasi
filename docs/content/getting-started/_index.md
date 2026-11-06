@@ -8,19 +8,19 @@ weight: 2
 ## Installation
 
 ```bash
-git clone https://github.com/wakaba/wakaba.git
-cd wakaba
+git clone https://github.com/wabasi/wabasi.git
+cd wabasi
 make build
 ```
 
 ## Start the Server
 
 ```bash
-./var/wakaba
+./bin/wabasi
 # Or: make run
 ```
 
-Wakaba starts at `http://localhost:8080`.
+Wabasi starts at `http://localhost:8080`.
 
 ## First Login
 
@@ -64,7 +64,7 @@ Navigate to `http://localhost:8080/device/{bob_device_token}`. Bob sees Alice's 
 
 ## Path B: Business Integration
 
-Connect an external CRM to Wakaba.
+Connect an external CRM to Wabasi.
 
 ### 1. Create Business Entities
 

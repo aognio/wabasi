@@ -5,9 +5,9 @@ weight: 3
 
 # Concepts
 
-## The Wakaba World
+## The Wabasi World
 
-One Wakaba instance is one isolated, locally controllable simulated messaging world.
+One Wabasi instance is one isolated, locally controllable simulated messaging world.
 
 ```
 Human UserAccounts
@@ -33,7 +33,7 @@ Applications / CRMs
              Business Platform boundary
 ```
 
-All messaging passes through Wakaba's common messaging infrastructure.
+All messaging passes through Wabasi's common messaging infrastructure.
 
 ## Participants
 
@@ -99,9 +99,9 @@ Direction is perspective-derived. For `Alice → Bob`, the message is outgoing f
 
 ## Media
 
-Media is part of the Wakaba world, not specifically the Business API.
+Media is part of the Wabasi world, not specifically the Business API.
 
-Consumer-consumer media uses the same underlying subsystem as consumer-business media. Internally, Wakaba uses content-addressable storage (CAS) for deduplication, but this is transparent to integrations.
+Consumer-consumer media uses the same underlying subsystem as consumer-business media. Internally, Wabasi uses content-addressable storage (CAS) for deduplication, but this is transparent to integrations.
 
 ## Business Platform as Adapter
 
@@ -117,7 +117,7 @@ and:
 Alice → Messaging Core → Business participant → Business Platform Adapter → Webhook → CRM
 ```
 
-The Business API is not Wakaba's messaging engine. It is an integration boundary.
+The Business API is not Wabasi's messaging engine. It is an integration boundary.
 
 ## Webhooks
 
@@ -131,7 +131,7 @@ Webhooks are only relevant for business traffic. Consumer-to-consumer messaging 
 
 ## Observability
 
-Wakaba records structured operational evidence:
+Wabasi records structured operational evidence:
 
 - **Events** — discrete facts (what happened)
 - **Traces** — causal relationships (how it happened)

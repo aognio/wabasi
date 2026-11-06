@@ -8,9 +8,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	adapterHTTP "github.com/wakaba/wakaba/internal/adapters/http"
-	sqliteAdapter "github.com/wakaba/wakaba/internal/adapters/sqlite"
-	"github.com/wakaba/wakaba/internal/application"
+	adapterHTTP "github.com/wabasi/wabasi/internal/adapters/http"
+	sqliteAdapter "github.com/wabasi/wabasi/internal/adapters/sqlite"
+	"github.com/wabasi/wabasi/internal/application"
 	"log/slog"
 	"os"
 )
@@ -256,7 +256,7 @@ func TestWebhookVerification(t *testing.T) {
 	server, cleanup := setupTestServer(t)
 	defer cleanup()
 
-	req := httptest.NewRequest(http.MethodGet, "/webhook?hub.mode=subscribe&hub.verify_token=wakaba-verify-token&hub.challenge=12345", nil)
+	req := httptest.NewRequest(http.MethodGet, "/webhook?hub.mode=subscribe&hub.verify_token=wabasi-verify-token&hub.challenge=12345", nil)
 	resp, err := server.App().Test(req)
 	if err != nil {
 		t.Fatal(err)

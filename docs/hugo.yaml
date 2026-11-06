@@ -1,5 +1,5 @@
 baseURL: /
-title: Wakaba Documentation
+title: Wabasi Documentation
 theme: hugo-book
 
 markup:
@@ -10,5 +10,5 @@ markup:
 menu:
   after:
     - name: GitHub
-      url: https://github.com/wakaba/wakaba
+      url: https://github.com/wabasi/wabasi
       weight: 10

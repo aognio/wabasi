@@ -22,12 +22,19 @@ CRM applications use the Meta-compatible API. Human users use the Virtual Client
 
 ## Starting MCP Mode
 
+The MCP server uses the Streamable HTTP transport and is served by the normal
+web server:
+
 ```bash
-# Start Wabasi in MCP stdio mode
 ./bin/wabasi --mcp
+# endpoint: http://localhost:8080/mcp
 ```
 
-MCP communicates over stdin/stdout using the JSON-RPC protocol.
+Web-based MCP clients and remote agents connect to `/mcp` directly.
+
+> MCP is a privileged diagnostic interface. The HTTP transport is opt-in and
+> unauthenticated by default; bind it to a trusted interface or put it behind
+> an authenticating reverse proxy.
 
 ## Architecture
 

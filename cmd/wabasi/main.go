@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 
 	"github.com/wabasi/wabasi/internal/adapters/http"
 	wabasiMCP "github.com/wabasi/wabasi/internal/adapters/mcp"
@@ -14,20 +15,23 @@ import (
 )
 
 func main() {
+	dbPath := "var/wabasi.db"
+	mcpEnabled := false
+
+	for _, arg := range os.Args[1:] {
+		switch arg {
+		case "--mcp", "-mcp", "--mcp-http", "-mcp-http":
+			mcpEnabled = true
+		default:
+			if !strings.HasPrefix(arg, "-") {
+				dbPath = arg
+			}
+		}
+	}
+
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelInfo,
 	}))
-
-	dbPath := "var/wabasi.db"
-	mcpMode := false
-
-	for _, arg := range os.Args[1:] {
-		if arg == "--mcp" {
-			mcpMode = true
-		} else if arg[0] != '-' {
-			dbPath = arg
-		}
-	}
 
 	db, err := sqliteAdapter.Open(dbPath)
 	if err != nil {
@@ -98,19 +102,15 @@ func main() {
 	deliveryWorker.Start(context.Background())
 	statusSim.Start(context.Background())
 
-	if mcpMode {
-		mcpServer := wabasiMCP.NewMCPServer(
+	var mcpServer *wabasiMCP.MCPServer
+	if mcpEnabled {
+		mcpServer = wabasiMCP.NewMCPServer(
 			obsSvc,
 			messageRepo,
 			conversationRepo,
 			identityRepo,
 			obsRepo,
 		)
-		if err := mcpServer.Serve_stdio(); err != nil {
-			logger.Error("mcp server error", "error", err)
-			os.Exit(1)
-		}
-		return
 	}
 
 	server := http.NewServer(messagingSvc, phoneReg, identityRepo, conversationRepo, messageRepo, logger)
@@ -118,6 +118,11 @@ func main() {
 	server.SetMediaStore(mediaStore)
 	server.SetObservabilityService(obsSvc)
 	server.RegisterAdmin(adminSvc, messagingSvc)
+
+	if mcpEnabled {
+		server.SetMCPTransport(mcpServer.StreamableHTTP())
+		logger.Info("MCP Streamable HTTP transport enabled", "endpoint", "/mcp")
+	}
 
 	addr := ":8080"
 	if port := os.Getenv("PORT"); port != "" {

@@ -12,12 +12,12 @@ import (
 )
 
 type MCPServer struct {
-	mcpServer *server.MCPServer
-	obs       *application.ObservabilityService
-	messages  ports.MessageRepository
-	convs     ports.ConversationRepository
+	mcpServer  *server.MCPServer
+	obs        *application.ObservabilityService
+	messages   ports.MessageRepository
+	convs      ports.ConversationRepository
 	identities ports.VirtualIdentityRepository
-	events    ports.EventReader
+	events     ports.EventReader
 }
 
 func NewMCPServer(
@@ -55,8 +55,16 @@ func (s *MCPServer) Server() *server.MCPServer {
 	return s.mcpServer
 }
 
-func (s *MCPServer) Serve_stdio() error {
-	return server.ServeStdio(s.mcpServer)
+// StreamableHTTP returns the MCP Streamable HTTP transport. It implements the
+// net/http.Handler interface and also exposes Handle for frameworks such as
+// Fiber that do not use net/http primitives.
+//
+// The transport is stateless by default: Wabasi's MCP surface is read-only and
+// does not push server-initiated notifications, so per-connection sessions add
+// no value. Callers can override this with a later option.
+func (s *MCPServer) StreamableHTTP(opts ...server.StreamableHTTPOption) *server.StreamableHTTPServer {
+	base := []server.StreamableHTTPOption{server.WithStateLess(true)}
+	return server.NewStreamableHTTPServer(s.mcpServer, append(base, opts...)...)
 }
 
 func jsonResult(data any) *mcp.CallToolResult {

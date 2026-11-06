@@ -75,9 +75,10 @@ func (s *Server) setupRoutes() {
 	meta.Use(s.authMiddleware())
 	meta.Post("/:phone_number_id/messages", s.handleSendMessage)
 
-	meta2 := s.app.Group("/:api_version")
-	meta2.Use(s.authMiddleware())
-	meta2.Post("/:phone_number_id/messages", s.handleSendMessage)
+	// Any other API version uses the same handler. Keep auth on the route
+	// itself: group middleware with a /:api_version prefix would also match
+	// unrelated single-segment paths such as /mcp.
+	s.app.Post("/:api_version/:phone_number_id/messages", s.authMiddleware(), s.handleSendMessage)
 
 	// Media API (protected)
 	media := s.app.Group("/media")

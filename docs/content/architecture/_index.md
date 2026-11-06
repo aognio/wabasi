@@ -87,7 +87,7 @@ Repository implementations for all domain entities. Auto-migration on startup.
 
 ### MCP Adapter
 
-MCP server exposing resources, tools, and prompts over stdio. Uses the `mcp-go` SDK.
+MCP server exposing resources, tools, and prompts over Streamable HTTP. Uses the `mcp-go` SDK.
 
 ### Webhook Adapter
 

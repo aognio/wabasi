@@ -102,12 +102,21 @@ cmd/
 
 ## MCP (Model Context Protocol)
 
-Wabasi exposes its world through MCP for agentic debugging, tracing, and analysis:
+Wabasi exposes its world through MCP for agentic debugging, tracing, and analysis.
+The MCP server uses the Streamable HTTP transport and is served by the normal web
+server:
 
 ```bash
-# Start in MCP mode (stdio transport)
+# Start Wabasi with the MCP endpoint enabled
 ./bin/wabasi --mcp
 ```
+
+The endpoint is `http://localhost:8080/mcp`. Web-based MCP clients and remote
+agents connect to it directly.
+
+> MCP is a privileged diagnostic interface. The HTTP transport is disabled by
+> default and has no authentication of its own — expose it only on trusted
+> networks or behind an authenticating reverse proxy.
 
 ### Resources
 - `wabasi://world/summary` — world snapshot
@@ -172,7 +181,7 @@ Admin reports at `/admin/reports`:
 | Flag/Env | Default | Description |
 |----------|---------|-------------|
 | `PORT` | `8080` | HTTP server port |
-| `--mcp` | false | Start in MCP stdio mode |
+| `--mcp` | false | Serve MCP over Streamable HTTP at `/mcp` |
 | (arg 1) | `var/wabasi.db` | SQLite database path |
 
 ## Development
